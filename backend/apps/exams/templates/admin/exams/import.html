@@ -1,0 +1,11 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>Download template: <a href="{% url 'admin:exams_import_template' 'csv' %}">CSV</a> | <a href="{% url 'admin:exams_import_template' 'xlsx' %}">XLSX</a>. Phase is its 1-based order; subject uses PHYSICS/CHEMISTRY/MATHEMATICS. Negative marks are a nonnegative penalty magnitude. Preview expires after 30 minutes.</p>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}{{ upload_form.as_p }}<button type="submit">Parse and preview</button></form>
+{% if preview %}
+<h2>Preview — {{ preview.rows|length }} rows</h2>
+<ul>{% for error in preview.errors %}<li>{{ error }}</li>{% endfor %}{% for warning in preview.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+<table><thead><tr><th>File row</th><th>Values</th></tr></thead><tbody>{% for row in preview.rows %}<tr><td>{{ row.row }}</td><td>{% for key, value in row.values.items %}<strong>{{ key }}</strong>: {{ value }}<br>{% endfor %}</td></tr>{% endfor %}</tbody></table>
+{% endif %}
+{% if confirmation %}<form method="post">{% csrf_token %}{{ confirmation.as_p }}<button type="submit">Confirm import</button></form>{% endif %}
+{% endblock %}

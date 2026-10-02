@@ -2,11 +2,13 @@
 
 GrowthSathi JEE Main and MHT-CET PCM mock-test platform.
 
-Phases 0, 1, and the narrowly scoped Phase 1.5 hardening pass are implemented: the production
-foundation, Google authentication, secure browser sessions, student onboarding, PostgreSQL
-integration verification, and internal owner access to Django Admin. Exam administration,
-payments, attempts, results, and the functional student dashboard intentionally remain
-unimplemented.
+Phases 0, 1, 1.5 and 2 are implemented: the production foundation, Google authentication,
+secure browser sessions, student onboarding, owner access to Django Admin, versioned exam
+administration, question authoring, atomic CSV/XLSX imports and paper validation. Payments,
+attempts, results and the functional student dashboard remain for later phases.
+
+See [Phase 2 operations](docs/EXAM_ADMINISTRATION.md) for the complete authoring/import workflow,
+template column definitions, baseline scheme policy and verification commands.
 
 ## Repository layout
 

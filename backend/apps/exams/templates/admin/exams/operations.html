@@ -1,0 +1,8 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>Current status: {{ mock.status }}. Legal next states: {{ transitions|join:", " }}.</p>
+<p>Scheme: {{ mock.exam_scheme }}. Review latest official rules before every real mock. Record the official source and edition/date below.</p>
+<p>Verified: {{ mock.rules_verified_at|default:"Not yet" }}. {{ mock.rules_source_notes }}</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Run selected operation</button></form>
+{% if result %}<h2>{{ result.status }}</h2><ul>{% for error in result.errors %}<li>{{ error }}</li>{% empty %}<li>All paper checks passed.</li>{% endfor %}</ul>{% endif %}
+{% endblock %}

@@ -1,0 +1,5 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>Corrections are allowed only after the exam closes and before results are published. Every changed answer field is recorded with your identity and reason. Scoring/publication is a later phase.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Apply audited correction</button></form>
+{% endblock %}
