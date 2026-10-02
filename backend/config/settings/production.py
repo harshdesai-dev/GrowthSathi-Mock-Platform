@@ -12,9 +12,16 @@ if SECRET_KEY == "development-only-change-me":  # noqa: F405
 if not os.getenv("DATABASE_URL"):
     raise ImproperlyConfigured("DATABASE_URL must be set in production.")
 
+if not GOOGLE_CLIENT_ID:  # noqa: F405
+    raise ImproperlyConfigured("GOOGLE_CLIENT_ID must be set in production.")
+
+if not os.getenv("JWT_SECRET"):
+    raise ImproperlyConfigured("JWT_SECRET must be set in production.")
+
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+AUTH_REFRESH_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = 31_536_000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True

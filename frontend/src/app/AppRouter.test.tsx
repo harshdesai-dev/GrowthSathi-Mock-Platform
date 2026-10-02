@@ -1,19 +1,90 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
-import { AppRouter } from "./AppRouter";
+import type { AuthUser, StudentProfile } from "../api/client";
+import { AuthContext, type AuthContextValue } from "../auth/auth-context";
+import { AppRoutes } from "./AppRouter";
 
-describe("AppRouter", () => {
-  it("renders the Phase 0 foundation without product features", () => {
-    window.history.pushState({}, "", "/");
-    render(<AppRouter />);
+vi.mock("@react-oauth/google", () => ({
+  GoogleLogin: () => <button>Continue with Google</button>,
+}));
+
+const incompleteUser: AuthUser = {
+  id: "student-id",
+  email: "student@example.com",
+  first_name: "Asha",
+  last_name: "Patil",
+  full_name: "Asha Patil",
+  onboarding_completed: false,
+  is_staff: false,
+};
+
+const emptyProfile: StudentProfile = {
+  full_name: "Asha Patil",
+  email: "student@example.com",
+  phone: "",
+  class_level: "",
+  target_exam: "",
+  onboarding_completed: false,
+};
+
+function authValue(
+  overrides: Partial<AuthContextValue> = {},
+): AuthContextValue {
+  return {
+    status: "unauthenticated",
+    user: null,
+    loginWithGoogle: vi.fn(),
+    logout: vi.fn(),
+    getProfile: vi.fn().mockResolvedValue(emptyProfile),
+    saveProfile: vi.fn(),
+    ...overrides,
+  };
+}
+
+function renderRoute(path: string, value: AuthContextValue) {
+  return render(
+    <AuthContext.Provider value={value}>
+      <MemoryRouter initialEntries={[path]}>
+        <AppRoutes />
+      </MemoryRouter>
+    </AuthContext.Provider>,
+  );
+}
+
+describe("Phase 1 route protection", () => {
+  beforeEach(() => vi.stubEnv("VITE_GOOGLE_CLIENT_ID", "test-google-client"));
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("redirects an unauthenticated student away from a protected route", () => {
+    renderRoute("/dashboard", authValue());
     expect(
-      screen.getByRole("heading", { name: "Mock platform foundation" }),
+      screen.getByRole("heading", { name: "Prepare with purpose." }),
     ).toBeInTheDocument();
+  });
+
+  it("redirects an incomplete student to onboarding", async () => {
+    renderRoute(
+      "/dashboard",
+      authValue({ status: "authenticated", user: incompleteUser }),
+    );
     expect(
-      screen.getByRole("img", { name: "GrowthSathi" }),
+      await screen.findByRole("heading", {
+        name: "Build your student profile",
+      }),
     ).toBeInTheDocument();
+  });
+
+  it("lets a returning student bypass onboarding", () => {
+    renderRoute(
+      "/onboarding",
+      authValue({
+        status: "authenticated",
+        user: { ...incompleteUser, onboarding_completed: true },
+      }),
+    );
     expect(
-      screen.getByText(/Product features begin in later phases/i),
+      screen.getByRole("heading", { name: "Welcome, Asha Patil." }),
     ).toBeInTheDocument();
   });
 });

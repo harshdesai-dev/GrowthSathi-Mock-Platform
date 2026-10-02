@@ -10,11 +10,13 @@ requires-python = ">=3.13,<3.14"
 dependencies = [
   "Django==5.2.17",
   "djangorestframework==3.18.1",
+  "djangorestframework-simplejwt[crypto]==5.5.1",
   "django-cors-headers>=4.7,<5",
   "dj-database-url>=2.3,<4",
   "drf-spectacular>=0.28,<1",
   "psycopg[binary]>=3.2,<4",
   "gunicorn>=23,<24; sys_platform != 'win32'",
+  "google-auth>=2.59,<3",
 ]
 
 [project.optional-dependencies]

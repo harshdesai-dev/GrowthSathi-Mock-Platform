@@ -1,13 +1,53 @@
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 
-import { FoundationPage } from "../pages/FoundationPage";
+import {
+  CompletedProfileRoute,
+  HomeRoute,
+  OnboardingRoute,
+  PublicAuthRoute,
+} from "../components/auth/RouteGuards";
+import { AuthPage } from "../pages/AuthPage";
+import { DashboardPage } from "../pages/DashboardPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
+import { OnboardingPage } from "../pages/OnboardingPage";
 
-const router = createBrowserRouter([
-  { path: "/", element: <FoundationPage /> },
-  { path: "*", element: <NotFoundPage /> },
-]);
+export function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<HomeRoute />} />
+      <Route
+        path="/auth"
+        element={
+          <PublicAuthRoute>
+            <AuthPage />
+          </PublicAuthRoute>
+        }
+      />
+      <Route
+        path="/onboarding"
+        element={
+          <OnboardingRoute>
+            <OnboardingPage />
+          </OnboardingRoute>
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          <CompletedProfileRoute>
+            <DashboardPage />
+          </CompletedProfileRoute>
+        }
+      />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
+}
 
 export function AppRouter() {
-  return <RouterProvider router={router} />;
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  );
 }

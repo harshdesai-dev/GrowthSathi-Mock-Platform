@@ -7,7 +7,7 @@ export function NotFoundPage() {
         <p className="eyebrow">404</p>
         <h1>Page not found</h1>
         <Link className="text-link" to="/">
-          Return to the foundation page
+          Return to GrowthSathi
         </Link>
       </section>
     </main>
