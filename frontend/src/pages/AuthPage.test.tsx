@@ -39,6 +39,7 @@ function contextValue(
     logout: vi.fn(),
     getProfile: vi.fn(),
     saveProfile: vi.fn(),
+    withAccess: vi.fn(),
   };
 }
 

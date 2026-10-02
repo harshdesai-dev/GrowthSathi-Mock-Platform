@@ -32,6 +32,7 @@ function renderOnboarding(saveProfile = vi.fn()): AuthContextValue {
     logout: vi.fn(),
     getProfile: vi.fn().mockResolvedValue(profile),
     saveProfile,
+    withAccess: vi.fn(),
   };
   render(
     <AuthContext.Provider value={value}>

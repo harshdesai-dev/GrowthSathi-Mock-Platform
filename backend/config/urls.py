@@ -6,6 +6,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("apps.accounts.api.urls")),
     path("api/v1/", include("apps.common.api.urls")),
+    path("api/v1/", include("apps.commerce.api")),
     path("api/schema/", SpectacularAPIView.as_view(), name="openapi-schema"),
     path(
         "api/docs/",

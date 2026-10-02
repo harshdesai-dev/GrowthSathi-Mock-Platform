@@ -11,6 +11,7 @@ export interface AuthContextValue {
   logout: () => Promise<void>;
   getProfile: () => Promise<StudentProfile>;
   saveProfile: (profile: ProfileInput) => Promise<StudentProfile>;
+  withAccess: <T>(operation: (token: string) => Promise<T>) => Promise<T>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

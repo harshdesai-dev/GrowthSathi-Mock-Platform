@@ -9,3 +9,4 @@ Architecture decisions are numbered and immutable after acceptance. If a decisio
 - [ADR 0005](0005-google-authentication-and-session-security.md) - Google identity and secure browser sessions
 - [ADR 0006](0006-owner-only-django-admin-password.md) - internal owner-only Django Admin password
 - [ADR 0007](0007-exam-authoring-and-import-boundaries.md) - versioned exam authoring and atomic imports
+- [ADR 0008](0008-offers-payments-and-access.md) - explicit offers, verified sandbox payments and access entitlements

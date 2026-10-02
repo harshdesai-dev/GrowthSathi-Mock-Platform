@@ -38,6 +38,7 @@ function authValue(
     logout: vi.fn(),
     getProfile: vi.fn().mockResolvedValue(emptyProfile),
     saveProfile: vi.fn(),
+    withAccess: vi.fn().mockResolvedValue([]),
     ...overrides,
   };
 }

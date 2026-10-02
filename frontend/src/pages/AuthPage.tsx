@@ -1,6 +1,6 @@
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import growthSathiLogo from "../assets/brand/growthsathi-logo.png";
 import { useAuth } from "../auth/auth-context";
@@ -81,6 +81,7 @@ export function AuthPage() {
         <p className="auth-footnote">
           Google is the only sign-in method for GrowthSathi.
         </p>
+        <Link to="/mocks">Browse mocks and offers</Link>
       </section>
     </main>
   );

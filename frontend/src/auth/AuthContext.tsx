@@ -109,8 +109,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [clearSession]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, loginWithGoogle, logout, getProfile, saveProfile }),
-    [status, user, loginWithGoogle, logout, getProfile, saveProfile],
+    () => ({
+      status,
+      user,
+      loginWithGoogle,
+      logout,
+      getProfile,
+      saveProfile,
+      withAccess,
+    }),
+    [
+      status,
+      user,
+      loginWithGoogle,
+      logout,
+      getProfile,
+      saveProfile,
+      withAccess,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

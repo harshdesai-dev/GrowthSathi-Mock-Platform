@@ -616,7 +616,7 @@ def test_postgresql_concurrent_imports_serialize(schemes, owner):
         except ValidationError:
             return "duplicate rejected"
         finally:
-            close_old_connections()
+            connection.close()
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         results = list(executor.map(lambda _: run(), range(2)))

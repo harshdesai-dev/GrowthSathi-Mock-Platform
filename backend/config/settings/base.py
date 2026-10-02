@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.common",
     "apps.exams",
+    "apps.commerce",
 ]
 
 MIDDLEWARE = [
@@ -107,6 +108,9 @@ REST_FRAMEWORK = {
 }
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("AUTH_ACCESS_TOKEN_MINUTES", "5"))),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.getenv("AUTH_REFRESH_TOKEN_DAYS", "7"))),

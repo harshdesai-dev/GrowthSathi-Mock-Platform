@@ -1,6 +1,107 @@
 @import "tailwindcss";
 @import "./tokens.css";
 
+.commerce-shell {
+  max-width: 75rem;
+  margin: auto;
+  padding: 1.5rem;
+}
+.commerce-nav,
+.commerce-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+.commerce-nav {
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 1.5rem;
+}
+.commerce-heading {
+  padding: 4rem 0 2.5rem;
+  max-width: 52rem;
+}
+.commerce-heading h1 {
+  font-size: clamp(2.4rem, 6vw, 4.8rem);
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+  margin: 1rem 0;
+}
+.commerce-heading h1 span {
+  color: var(--color-brand-lime);
+}
+.commerce-heading p,
+.offer-card p,
+.checkout-panel p {
+  color: var(--color-text-secondary);
+}
+.offer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1.25rem;
+  margin: 1.5rem 0 3rem;
+}
+.offer-card,
+.checkout-panel {
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  padding: 2rem;
+  background: var(--color-bg-surface);
+}
+.offer-card--combo {
+  border-color: var(--color-brand-lime);
+}
+.offer-card .offer-price,
+.checkout-panel .offer-price {
+  font-size: 2.5rem;
+  color: var(--color-text-primary);
+  font-weight: 700;
+  margin: 1rem 0;
+}
+.offer-card li,
+.checkout-panel li {
+  margin: 0.6rem 0;
+}
+.mock-list {
+  display: grid;
+  gap: 0.75rem;
+}
+.mock-row {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  padding: 1.4rem 0;
+}
+.mock-row span {
+  color: var(--color-text-secondary);
+}
+.commerce-footer {
+  margin-top: 4rem;
+  border-top: 1px solid var(--color-border);
+  padding: 2rem 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+.checkout-panel {
+  max-width: 42rem;
+  margin: 2rem auto;
+}
+.checkout-panel code {
+  overflow-wrap: anywhere;
+}
+.checkout-panel .secondary-button {
+  margin: 0.75rem 0;
+}
+.purchased-access {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+}
+
 * {
   box-sizing: border-box;
 }

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import growthSathiLogo from "../assets/brand/growthsathi-logo.png";
 import { useAuth } from "../auth/auth-context";
+import { PurchasedAccess } from "./CommercePages";
 
 export function DashboardPage() {
   const { user, logout } = useAuth();
@@ -50,8 +51,8 @@ export function DashboardPage() {
           Welcome, {user?.full_name || user?.first_name}.
         </h1>
         <p>
-          Your secure GrowthSathi account and student profile are ready.
-          Mock-test features arrive in the next implementation phases.
+          Your secure GrowthSathi account and student profile are ready. Browse
+          available offers below. The exam interface arrives in a later phase.
         </p>
         <dl>
           <div>
@@ -69,6 +70,7 @@ export function DashboardPage() {
           </p>
         ) : null}
       </section>
+      <PurchasedAccess />
     </main>
   );
 }
