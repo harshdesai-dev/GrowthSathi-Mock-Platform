@@ -36,6 +36,9 @@ def test_valid_google_login_creates_user_profile_and_secure_session(client, monk
     assert response.json()["user"]["onboarding_completed"] is False
     assert response.json()["access_token"]
     user = User.objects.get(google_sub=VALID_IDENTITY.sub)
+    assert user.has_usable_password() is False
+    assert user.is_staff is False
+    assert user.is_superuser is False
     assert user.profile.full_name == "Asha Patil"
     refresh_cookie = response.cookies[settings.AUTH_REFRESH_COOKIE_NAME]
     assert refresh_cookie["httponly"] is True
@@ -201,9 +204,8 @@ def test_google_verifier_rejects_expired_or_invalid_signature(monkeypatch, setti
 
 def test_google_verifier_accepts_verified_claims(monkeypatch, settings):
     settings.GOOGLE_CLIENT_ID = "test-client"
-    monkeypatch.setattr(
-        "apps.accounts.services.google_id_token.verify_oauth2_token",
-        lambda *args, **kwargs: {
+    verifier = Mock(
+        return_value={
             "sub": VALID_IDENTITY.sub,
             "email": VALID_IDENTITY.email,
             "email_verified": True,
@@ -211,7 +213,12 @@ def test_google_verifier_accepts_verified_claims(monkeypatch, settings):
             "aud": "test-client",
             "given_name": "Asha",
             "family_name": "Patil",
-        },
+        }
+    )
+    monkeypatch.setattr(
+        "apps.accounts.services.google_id_token.verify_oauth2_token",
+        verifier,
     )
 
     assert verify_google_id_token("valid-token") == VALID_IDENTITY
+    assert verifier.call_args.kwargs["audience"] == "test-client"

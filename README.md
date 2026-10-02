@@ -2,7 +2,11 @@
 
 GrowthSathi JEE Main and MHT-CET PCM mock-test platform.
 
-Phases 0 and 1 are implemented: the production foundation, Google authentication, secure browser sessions, and student onboarding. Exam administration, payments, attempts, results, and the functional student dashboard intentionally remain unimplemented.
+Phases 0, 1, and the narrowly scoped Phase 1.5 hardening pass are implemented: the production
+foundation, Google authentication, secure browser sessions, student onboarding, PostgreSQL
+integration verification, and internal owner access to Django Admin. Exam administration,
+payments, attempts, results, and the functional student dashboard intentionally remain
+unimplemented.
 
 ## Repository layout
 
@@ -23,7 +27,8 @@ Phases 0 and 1 are implemented: the production foundation, Google authentication
 
 Copy `.env.example` to `.env` and replace development defaults as needed. Never commit `.env` or actual credentials.
 
-The backend reads process environment variables. The frontend reads variables prefixed with `VITE_`.
+The backend reads process environment variables. Vite reads the repository-root `.env` and exposes
+only variables prefixed with `VITE_`. Do not put an Admin password in `.env` or commit credentials.
 
 ## Frontend
 
@@ -79,11 +84,10 @@ The API exposes:
 - `GET/PATCH /api/v1/profile/` - reads or completes the current student's profile.
 - `GET /api/schema/` - OpenAPI schema.
 
-## Initial platform owner
+## Initial platform owner and Django Admin
 
-The bootstrap command never hard-codes an identity and never creates a usable password. Obtain the
-owner's verified Google `sub` (for example, after their first normal Google login, inspect that
-account in the trusted database), then run:
+Obtain the owner's verified Google `sub` after their first normal Google login, then explicitly
+bootstrap that exact email/`sub` pair:
 
 ```bash
 .venv/Scripts/python manage.py bootstrap_admin \
@@ -93,24 +97,117 @@ account in the trusted database), then run:
   --last-name Owner
 ```
 
-The command creates or promotes only an exact email/`sub` match and aborts on conflicts. Phase 1
-sets the staff/superuser role but does not add a password login or a separate admin login UI.
+The bootstrap command creates or promotes only an exact match, aborts on conflicts, and initially
+leaves the password unusable. Assign the internal owner password through a non-echoing prompt:
+
+```bash
+.venv/Scripts/python manage.py set_admin_password \
+  --email owner@example.com \
+  --google-sub verified-google-sub
+```
+
+For controlled automation, put the password in a temporary process environment variable and name
+that variable with `--password-env`; never put the password directly on the command line:
+
+```powershell
+$env:GROWTHSATHI_ADMIN_PASSWORD = "value-from-an-approved-password-manager"
+.venv/Scripts/python manage.py set_admin_password `
+  --email owner@example.com `
+  --google-sub verified-google-sub `
+  --password-env GROWTHSATHI_ADMIN_PASSWORD
+Remove-Item Env:GROWTHSATHI_ADMIN_PASSWORD
+```
+
+The command accepts only an active user who is already both staff and superuser, runs Django's
+password validators, and stores only Django's password hash. The owner then signs in at `/admin/`
+with their email and this internal password. This is an operational mechanism only: students still
+have unusable passwords, and no password login/signup/reset API exists for the product.
 
 ## Google Cloud configuration
 
-Create an OAuth 2.0 Client ID of type **Web application** in Google Cloud. Add every exact frontend
-origin (scheme, host, and port) to **Authorized JavaScript origins**, including
-`http://localhost:5173` for local development and the production HTTPS origin. This credential flow
-does not use a redirect URI or client secret. Configure Django's allowed hosts, CORS allowed origins,
-and CSRF trusted origins for the corresponding API/frontend deployment. For separate subdomains,
-review cookie domains and SameSite values together; any cross-site setup requires HTTPS,
-`SameSite=None`, and Secure cookies.
+The implementation uses the Google Identity Services JavaScript callback and sends its ID token to
+Django for independent verification. Follow Google's
+[Web client setup](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid)
+and [server verification](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token)
+guides:
+
+1. Create/select a Google Cloud project and configure its OAuth branding/consent screen.
+2. Create an OAuth 2.0 Client ID with application type **Web application**.
+3. Add `http://localhost` and `http://localhost:5173` to **Authorized JavaScript origins** for local
+   development. Add the exact production HTTPS frontend origin before deployment.
+4. This callback-based ID-token flow requires no authorized redirect URI and no
+   `GOOGLE_CLIENT_SECRET`.
+5. Set the same client ID as backend `GOOGLE_CLIENT_ID` and frontend-build
+   `VITE_GOOGLE_CLIENT_ID`.
+6. Keep local `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` set to
+   `http://localhost:5173`; the local API remains `http://localhost:8000`.
+
+### Manual Google login smoke test
+
+1. Put the Web client ID in both environment variables without committing `.env`.
+2. Start Django at `http://localhost:8000` and Vite at `http://localhost:5173`.
+3. Open `/auth`; confirm the official Google button renders without an origin error.
+4. Sign in with an allowed Google account. If the consent screen is in Testing, add the account as
+   a test user first.
+5. In browser developer tools, confirm `POST /api/v1/auth/google/` succeeds, the response contains a
+   short-lived access token, and `growthsathi_refresh` is an HttpOnly cookie rather than browser
+   storage.
+6. Confirm a new account reaches `/onboarding`, completes the profile, and reaches `/dashboard`.
+7. Sign out, sign in again, and confirm the returning account bypasses onboarding.
+8. Confirm refresh survives a page reload and logout prevents the old refresh session from being
+   reused.
+
+For separate production subdomains, review cookie domains and SameSite values together. Any
+cross-site deployment requires HTTPS, `SameSite=None`, and Secure cookies.
 
 ## Local PostgreSQL
+
+The Compose configuration provisions the documented `growthsathi` role/database on port 5432:
 
 ```bash
 docker compose up -d postgres
 ```
+
+If another PostgreSQL service already owns port 5432, Compose cannot provision those credentials
+there. Either stop/reconfigure that service deliberately, change the Compose host port, or create an
+isolated project cluster. On Windows with PostgreSQL 18 installed, the following keeps the existing
+service untouched and uses port 55432:
+
+```powershell
+& 'C:\Program Files\PostgreSQL\18\bin\initdb.exe' `
+  -D 'backend\.postgres-data' `
+  -U growthsathi `
+  -W `
+  --encoding=UTF8 `
+  --auth-host=scram-sha-256 `
+  --auth-local=scram-sha-256
+
+& 'C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe' `
+  -D 'backend\.postgres-data' `
+  -l 'backend\.postgres-data\server.log' `
+  -o '-p 55432 -h 127.0.0.1' `
+  -w start
+
+$env:PGPASSWORD = 'growthsathi'
+& 'C:\Program Files\PostgreSQL\18\bin\createdb.exe' `
+  -h 127.0.0.1 -p 55432 -U growthsathi growthsathi
+$env:DATABASE_URL = 'postgresql://growthsathi:growthsathi@127.0.0.1:55432/growthsathi'
+
+cd backend
+.venv/Scripts/python manage.py migrate
+.venv/Scripts/python manage.py runserver
+```
+
+Stop that isolated cluster with:
+
+```powershell
+& 'C:\Program Files\PostgreSQL\18\bin\pg_ctl.exe' `
+  -D 'backend\.postgres-data' -w stop
+```
+
+The checked-in username/password are local-development values only. Use independently managed
+credentials in every deployed environment. `DATABASE_URL` remains the single Django database
+configuration interface.
 
 PostgreSQL is the only stateful service in Phase 0. Deadlines will be enforced by server-side domain services and database state in the exam phase. A worker may be introduced later only if reliability or load testing demonstrates the need.
 

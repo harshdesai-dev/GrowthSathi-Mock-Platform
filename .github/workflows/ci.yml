@@ -51,6 +51,8 @@ jobs:
       DJANGO_SETTINGS_MODULE: config.settings.test
       DJANGO_SECRET_KEY: ci-only-not-a-production-secret
       DATABASE_URL: postgresql://growthsathi:growthsathi@localhost:5432/growthsathi_test
+      GOOGLE_CLIENT_ID: ci-readiness-check.apps.googleusercontent.com
+      JWT_SECRET: ci-only-jwt-signing-key-at-least-thirty-two-bytes-long
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -61,5 +63,8 @@ jobs:
       - run: python -m pip install -e ".[dev]"
       - run: python -m ruff check .
       - run: python -m ruff format --check .
+      - run: python manage.py migrate --noinput
+      - run: python manage.py makemigrations --check --dry-run
       - run: python -m pytest
+      - run: python manage.py spectacular --validate --file /tmp/openapi.yml
       - run: python manage.py check --deploy --settings=config.settings.production

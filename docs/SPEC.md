@@ -53,7 +53,7 @@ Google Sign-In only.
 
 Do NOT build:
 
-- email/password authentication
+- student email/password authentication
 - phone OTP authentication
 - separate login/signup systems
 
@@ -83,6 +83,18 @@ For V1, phone numbers must be valid Indian mobile numbers. Normalize stored valu
 
 Returning users go directly to Dashboard.
 
+Internal Admin authentication exception:
+
+- the sole platform owner may use Django's standard password authentication at `/admin/`
+- only an already bootstrapped, active staff superuser may be assigned this password
+- the password must use Django's normal password hashing and password validation
+- student accounts retain unusable passwords by default
+- no student password login, signup, reset endpoint, or public password API is permitted
+- Google `sub` remains the durable external identity for the owner and all students
+
+This exception is an internal operational control for Django Admin, not a student-facing product
+authentication method.
+
 ## 4. Roles
 
 There are only two roles.
@@ -105,6 +117,9 @@ Can:
 Admin
 
 Only the platform owner has Admin privileges.
+
+The owner is explicitly bootstrapped and may use the internal Django Admin password exception
+defined in Authentication. Do not expose this mechanism through student-facing APIs.
 
 Admin can:
 
@@ -1531,6 +1546,9 @@ Admin can initially use:
 
 /admin/
 
+`/admin/` uses Django's standard staff/superuser authentication. The owner password is assigned
+only through the trusted management command; it is never created or reset through a public API.
+
 plus a lightweight branded admin console later if required.
 
 ## 32. Backend APIs
@@ -1816,8 +1834,6 @@ DATABASE_URL=
 FRONTEND_URL=
 
 GOOGLE_CLIENT_ID=
-
-GOOGLE_CLIENT_SECRET=
 
 RAZORPAY_KEY_ID=
 
@@ -2143,6 +2159,18 @@ Build:
 - protected routes
 
 Tests.
+
+Commit.
+
+Phase 1.5 — Integration hardening
+
+Verify:
+
+- full PostgreSQL migrations and authentication tests
+- local Google Identity Services configuration and manual smoke-test procedure
+- internal owner-only Django Admin password authentication
+
+Do not add student password authentication or Phase 2 domain models.
 
 Commit.
 

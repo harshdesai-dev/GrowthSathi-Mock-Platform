@@ -11,6 +11,7 @@ __pycache__/
 .venv/
 backend/.venv/
 backend/.python-packages/
+backend/.postgres-data/
 backend/build/
 backend/*.egg-info/
 htmlcov/

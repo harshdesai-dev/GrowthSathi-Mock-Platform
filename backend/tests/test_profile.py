@@ -130,3 +130,17 @@ def test_user_cannot_access_another_students_profile(student):
     assert response.status_code == 200
     assert response.json()["email"] == student.email
     assert response.json()["full_name"] != other.profile.full_name
+
+
+@pytest.mark.django_db
+def test_profile_api_cannot_promote_student_to_staff(authenticated_client, student):
+    response = authenticated_client.patch(
+        reverse("student-profile"),
+        {**valid_onboarding(), "is_staff": True, "is_superuser": True},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    student.refresh_from_db()
+    assert student.is_staff is False
+    assert student.is_superuser is False
