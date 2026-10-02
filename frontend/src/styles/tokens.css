@@ -1,0 +1,25 @@
+@theme {
+  --color-bg-primary: #070a08;
+  --color-bg-surface: #0d120f;
+  --color-bg-elevated: #121815;
+  --color-brand-lime: #b7ff00;
+  --color-brand-lime-hover: #a4e600;
+  --color-text-primary: #f5f7f5;
+  --color-text-secondary: #a7b0aa;
+  --color-text-muted: #717b75;
+  --color-border: #27302a;
+  --color-success: #59d987;
+  --color-danger: #ff5b5b;
+  --color-warning: #ffc857;
+
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 1rem;
+  --shadow-brand-soft: 0 0 40px rgb(183 255 0 / 10%);
+}
+
+:root {
+  color-scheme: dark;
+  --focus-ring: 0 0 0 3px rgb(183 255 0 / 35%);
+  --content-max: 75rem;
+}

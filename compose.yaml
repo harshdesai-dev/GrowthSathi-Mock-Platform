@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: growthsathi
+      POSTGRES_USER: growthsathi
+      POSTGRES_PASSWORD: growthsathi
+    ports:
+      - "5432:5432"
+    volumes:
+      - growthsathi-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U growthsathi -d growthsathi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  growthsathi-postgres:
