@@ -2,6 +2,13 @@
 
 GrowthSathi JEE Main and MHT-CET PCM mock-test platform.
 
+Phase 8 production hardening and local verification are documented in
+[Phase 8 verification](docs/PHASE8_VERIFICATION.md), [deployment/recovery](docs/DEPLOYMENT.md),
+[required rehearsal](docs/REHEARSAL.md), [mock-day runbook](docs/MOCK_DAY_RUNBOOK.md) and
+[launch checklist](docs/LAUNCH_CHECKLIST.md). No staging is deployed yet. **Paid launch is
+not approved; live payments remain blocked.** Automated verification is not a real provider,
+physical-device, managed-backup or full private mock rehearsal.
+
 Phases 0, 1, 1.5, 2, 3, 4, 4.5 and 5 are implemented: the production foundation, Google authentication,
 secure browser sessions, student onboarding, owner access to Django Admin, versioned exam
 administration, question authoring, atomic CSV/XLSX imports, paper validation, explicit
@@ -65,6 +72,12 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+For production builds, set `VITE_API_BASE_URL` to the exact deployed HTTPS API ending
+in `/api/v1` and `VITE_GOOGLE_CLIENT_ID` to the OAuth Web client ID. Builds now reject
+missing/local/HTTP production configuration and unexpected VITE variables. CI uses
+explicit synthetic values only. Razorpay's public key comes from the backend order
+response; no VITE Razorpay variable or backend secret is required.
 
 ## Backend
 

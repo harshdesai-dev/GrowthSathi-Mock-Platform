@@ -13,3 +13,4 @@ Architecture decisions are numbered and immutable after acceptance. If a decisio
 - [ADR 0009](0009-reliable-live-exam-engine.md) - server-timed attempts, phase locks, durable responses and recovery
 - [ADR 0010](0010-content-keyed-start-validation.md) - profiled start-path hardening with content-keyed pure field validation
 - [ADR 0011](0011-published-results.md) - deterministic scoring, immutable generations and manually published results
+- [ADR 0012](0012-production-launch-boundaries.md) - production hardening and explicit launch evidence gates

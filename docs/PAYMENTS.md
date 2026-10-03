@@ -1,6 +1,7 @@
 # Phase 3 payments and access operations
 
-Sandbox only. Do not accept real payments. No Phase 4 exam interface exists.
+Sandbox only. Do not accept real payments. Phase 8 deployment/rehearsal requirements
+are in [REHEARSAL.md](REHEARSAL.md) and [DEPLOYMENT.md](DEPLOYMENT.md).
 See [ADR 0008](adr/0008-offers-payments-and-access.md) for transaction and state rules.
 
 ## Configure the sandbox
@@ -59,7 +60,7 @@ The checkout URL retains the local order UUID for reload/status refresh. Browser
 success means **verify**, not **unlock**. Verification/network uncertainty stays
 pending with a warning not to pay twice. Failure and modal cancellation are distinct
 messages. Refresh reads backend state, allowing webhook reconciliation to recover
-the screen. No actual attempt or start button exists.
+the screen. Exam entry remains controlled by server timing and entitlement checks.
 
 ## Owner inspection and recovery
 
@@ -103,6 +104,17 @@ retain provider/accounting evidence and keep the covered order paid; granular re
 records/automation are deferred. Revocation records the owner and explanation.
 Callback/webhook replay will not restore revoked/refunded grants. Partial-overlap
 combos cost the full advertised amount; no prorated refund rule has been invented.
+
+For a missing callback/webhook, an owner can fetch current provider state and run the
+same idempotent reconciler without a browser signature:
+
+```bash
+python manage.py commerce_operation reconcile-payment ORDER_UUID --owner OWNER_EMAIL --reference pay_PROVIDER_ID
+```
+
+This requires the bootstrapped owner and a linked order. It fetches both provider
+payment and order, validates identity, receipt, amount, currency and capture, and
+never calls a charge/capture/refund API. Inspect order status and grants afterward.
 
 ## Required manual test-mode smoke test
 
