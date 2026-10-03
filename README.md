@@ -7,10 +7,12 @@ secure browser sessions, student onboarding, owner access to Django Admin, versi
 administration, question authoring, atomic CSV/XLSX imports, paper validation, explicit
 offers, verified Razorpay test-mode payments, mock access, and the reliable live exam engine.
 Deterministic scoring, private published report cards, ranking, Mock Percentile, answer review
-and audited correction/republication are implemented. Phase 6 has not started. Live payments remain disabled.
+and audited correction/republication are implemented. Phase 6 adds the authenticated student dashboard,
+using server-derived mock access/start state and published-result history. Live payments remain disabled.
 
 See [result operations](docs/RESULTS.md), [result architecture](docs/adr/0011-published-results.md)
-and [Phase 5 verification](docs/PHASE5_VERIFICATION.md).
+and [Phase 5 verification](docs/PHASE5_VERIFICATION.md), plus
+[Phase 6 verification](docs/PHASE6_VERIFICATION.md).
 
 See [live exam operations](docs/LIVE_EXAMS.md),
 [exam architecture](docs/adr/0009-reliable-live-exam-engine.md), and

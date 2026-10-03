@@ -1,8 +1,22 @@
 # Phase 5: scoring and published result operations
 
+## Phase 6 dashboard read model
+
+`GET /api/v1/dashboard/` is an authenticated, `private, no-store` student-only read model.
+It composes the existing paid-access, exam-info/start eligibility, attempt, and published-result
+services; it does not calculate access, timing, scoring, ranking, or publication state in the
+browser. It returns public mock schedule cards with the student's access/attempt state, the
+server time used for countdown display, latest published result and comparison, and the existing
+private published-result history. It never exposes payment details, other students, unpublished
+scores, answer keys, or review content.
+
+Dashboard actions only link into existing instruction/exam and published result flows. The actual
+start remains the existing server-authorized start endpoint, so a client clock cannot enable a
+new attempt.
+
 See [ADR 0011](adr/0011-published-results.md) and [verification](PHASE5_VERIFICATION.md).
-There is no automatic publication, worker, Redis or Celery. No Phase 6 dashboard or
-subject analytics is included. The existing live exam payload remains key-free.
+There is no automatic publication, worker, Redis or Celery. No subject analytics is
+included. The existing live exam payload remains key-free.
 
 ## Owner checklist
 

@@ -3,18 +3,21 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from decimal import Decimal
 from threading import Barrier
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import close_old_connections, connection, connections, models
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
 from apps.attempts.models import Attempt, StudentResponse
 from apps.exams.models import ExamScheme, MockTest
 from apps.exams.services import correct_answer_key
+from apps.results.api import dashboard_lifecycle
 from apps.results.models import Result, ResultCalculationEntry, ResultCalculationRun
 from apps.results.scoring import participant_reason, rank_scores, score_attempt, score_question
 from apps.results.services import (
@@ -562,3 +565,80 @@ def test_postgres_duplicate_verify_and_calculate_starts():
     assert identities[0] == identities[1]
     assert ResultCalculationRun.objects.count() == 1
     assert ResultCalculationEntry.objects.count() == 3
+
+
+def test_dashboard_is_authenticated_private_and_only_exposes_published_results(batch):
+    mock, owner, students, _, _ = batch
+    anonymous = APIClient().get("/api/v1/dashboard/")
+    assert anonymous.status_code == 401
+
+    before = client(students[0]).get("/api/v1/dashboard/")
+    assert before.status_code == 200
+    assert before.data["latest_result"] is None
+    assert before.data["upcoming_mocks"][0]["lifecycle_state"] == "RESULT_PENDING"
+    assert all("email" not in str(item) for item in before.data["upcoming_mocks"])
+    assert set(before.data["upcoming_mocks"][0]) == {
+        "id",
+        "title",
+        "exam",
+        "starts_at",
+        "ends_at",
+        "access_state",
+        "lifecycle_state",
+        "can_start",
+        "attempt_id",
+        "attempt_status",
+    }
+
+    stranger = User.objects.create_user(
+        email="dashboard-stranger@test.invalid", google_sub="dashboard-stranger"
+    )
+    stranger_data = client(stranger).get("/api/v1/dashboard/").data
+    assert stranger_data["upcoming_mocks"][0]["access_state"] == "NOT_PURCHASED"
+    assert stranger_data["upcoming_mocks"][0]["can_start"] is False
+    assert stranger_data["upcoming_mocks"][0]["attempt_id"] is None
+
+    run = calculated(mock, owner)
+    publish_results(run.pk, actor=owner)
+    published = client(students[0]).get("/api/v1/dashboard/")
+    assert published.status_code == 200
+    assert published["Cache-Control"] == "private, no-store"
+    assert published.data["latest_result"]["mock_id"] == str(mock.pk)
+    assert published.data["latest_result"]["score"] == "4.00"
+    assert published.data["history"][0]["mock_id"] == str(mock.pk)
+    assert "student_name" not in str(published.data)
+    assert client(stranger).get(f"/api/v1/dashboard/?student_id={students[0].pk}").data == {
+        "server_time": published.data["server_time"],
+        "next_mock": None,
+        "upcoming_mocks": [],
+        "latest_result": None,
+        "history": [],
+    }
+
+
+@pytest.mark.parametrize(
+    ("status", "starts_offset", "ends_offset", "attempt_status", "expected"),
+    [
+        ("CANCELLED", -5, 5, None, "CANCELLED"),
+        ("RESULTS_PUBLISHED", -5, 5, None, "RESULTS_PUBLISHED"),
+        ("SCHEDULED", -5, 5, "IN_PROGRESS", "ATTEMPT_IN_PROGRESS"),
+        ("SCHEDULED", -5, 5, "SUBMITTED", "SUBMITTED"),
+        ("SCHEDULED", -5, 5, "AUTO_SUBMITTED", "RESULT_PENDING"),
+        ("CLOSED", -5, 5, None, "RESULT_PENDING"),
+        ("LIVE", -5, 5, None, "LIVE"),
+        ("SCHEDULED", 10, 190, None, "STARTING_SOON"),
+        ("SCHEDULED", 16, 196, None, "UPCOMING"),
+        ("LIVE", -190, -10, "IN_PROGRESS", "RESULT_PENDING"),
+    ],
+)
+def test_dashboard_lifecycle_uses_server_schedule_and_attempt_state(
+    status, starts_offset, ends_offset, attempt_status, expected
+):
+    now = timezone.now()
+    mock = SimpleNamespace(
+        status=status,
+        starts_at=now + timedelta(minutes=starts_offset),
+        ends_at=now + timedelta(minutes=ends_offset),
+    )
+    info = {"attempt_status": attempt_status} if attempt_status else None
+    assert dashboard_lifecycle(mock, info, now) == expected

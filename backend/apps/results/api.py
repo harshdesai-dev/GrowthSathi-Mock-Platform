@@ -1,8 +1,11 @@
 """Published-generation reads only; never serialize private calculation models wholesale."""
 
+from datetime import timedelta
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from django.urls import path
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.exceptions import APIException, NotFound
@@ -10,6 +13,8 @@ from rest_framework.response import Response
 
 from apps.attempts.api import ExamView
 from apps.attempts.models import Attempt
+from apps.attempts.services import exam_info, has_access
+from apps.commerce.services import PUBLIC_STATUSES
 from apps.exams.models import MockTest
 
 from .models import Result, ResultCalculationRun
@@ -125,6 +130,137 @@ class History(ExamView):
         return Response(SummarySerializer([summary(result) for result in results], many=True).data)
 
 
+class DashboardMockSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    exam = serializers.CharField()
+    starts_at = serializers.DateTimeField()
+    ends_at = serializers.DateTimeField()
+    access_state = serializers.ChoiceField(choices=["PURCHASED", "NOT_PURCHASED", "CANCELLED"])
+    lifecycle_state = serializers.ChoiceField(
+        choices=[
+            "UPCOMING",
+            "STARTING_SOON",
+            "LIVE",
+            "ATTEMPT_IN_PROGRESS",
+            "SUBMITTED",
+            "RESULT_PENDING",
+            "RESULTS_PUBLISHED",
+            "CANCELLED",
+        ]
+    )
+    can_start = serializers.BooleanField()
+    attempt_id = serializers.UUIDField(allow_null=True)
+    attempt_status = serializers.CharField(allow_null=True)
+
+
+class DashboardResultSerializer(SummarySerializer):
+    previous_score = serializers.DecimalField(max_digits=18, decimal_places=2, allow_null=True)
+    score_difference = serializers.DecimalField(max_digits=18, decimal_places=2, allow_null=True)
+
+
+class DashboardSerializer(serializers.Serializer):
+    server_time = serializers.DateTimeField()
+    next_mock = DashboardMockSerializer(allow_null=True)
+    upcoming_mocks = DashboardMockSerializer(many=True)
+    latest_result = DashboardResultSerializer(allow_null=True)
+    history = SummarySerializer(many=True)
+
+
+def dashboard_lifecycle(mock, info, now):
+    """Map existing lifecycle records to dashboard-only display states."""
+    if mock.status == "CANCELLED":
+        return "CANCELLED"
+    if mock.status == "RESULTS_PUBLISHED":
+        return "RESULTS_PUBLISHED"
+    attempt_status = info["attempt_status"] if info else None
+    if mock.status == "CLOSED" or attempt_status == "AUTO_SUBMITTED" or now >= mock.ends_at:
+        return "RESULT_PENDING"
+    if attempt_status == "IN_PROGRESS":
+        return "ATTEMPT_IN_PROGRESS"
+    if attempt_status == "SUBMITTED":
+        return "SUBMITTED"
+    if mock.starts_at <= now < mock.ends_at:
+        return "LIVE"
+    if now < mock.starts_at <= now + timedelta(minutes=15):
+        return "STARTING_SOON"
+    return "UPCOMING"
+
+
+def dashboard_mock(mock, student, now):
+    """Read access/start state from the established attempt and commerce services."""
+    allowed = mock.status != "CANCELLED" and has_access(student.pk, mock.pk)
+    info = exam_info(student, mock.pk) if allowed else None
+    return {
+        "id": mock.pk,
+        "title": mock.title,
+        "exam": mock.exam_type.name,
+        "starts_at": mock.starts_at,
+        "ends_at": mock.ends_at,
+        "access_state": "PURCHASED"
+        if allowed
+        else "CANCELLED"
+        if mock.status == "CANCELLED"
+        else "NOT_PURCHASED",
+        "lifecycle_state": dashboard_lifecycle(mock, info, now),
+        "can_start": info["can_start"] if info else False,
+        "attempt_id": info["attempt_id"] if info else None,
+        "attempt_status": info["attempt_status"] if info else None,
+    }
+
+
+class Dashboard(ExamView):
+    """Student-safe composition of existing access, attempt and published-result reads."""
+
+    @extend_schema(responses=DashboardSerializer)
+    def get(self, request):
+        now = timezone.now()
+        mocks = list(
+            MockTest.objects.filter(status__in=PUBLIC_STATUSES - {"RESULTS_PUBLISHED"})
+            .select_related("exam_type")
+            .order_by("starts_at", "pk")
+        )
+        upcoming = [dashboard_mock(mock, request.user, now) for mock in mocks]
+        results = list(
+            published_results()
+            .filter(attempt__student=request.user)
+            .order_by("-attempt__mock_test__starts_at", "id")
+        )
+        latest = results[0] if results else None
+        previous = (
+            published_results()
+            .filter(
+                attempt__student=request.user,
+                attempt__mock_test__exam_type_id=latest.attempt.mock_test.exam_type_id,
+                attempt__mock_test__starts_at__lt=latest.attempt.mock_test.starts_at,
+            )
+            .order_by("-attempt__mock_test__starts_at", "-published_at", "id")
+            .first()
+            if latest
+            else None
+        )
+        latest_data = (
+            {
+                **summary(latest),
+                "previous_score": previous.score if previous else None,
+                "score_difference": latest.score - previous.score if previous else None,
+            }
+            if latest
+            else None
+        )
+        return Response(
+            DashboardSerializer(
+                {
+                    "server_time": now,
+                    "next_mock": upcoming[0] if upcoming else None,
+                    "upcoming_mocks": upcoming,
+                    "latest_result": latest_data,
+                    "history": [summary(result) for result in results],
+                }
+            ).data
+        )
+
+
 class LeaderboardRowSerializer(serializers.Serializer):
     rank = serializers.IntegerField()
     name = serializers.CharField()
@@ -213,6 +349,7 @@ class Review(ExamView):
 
 
 urlpatterns = [
+    path("dashboard/", Dashboard.as_view()),
     path("mocks/<uuid:mock_id>/result/", Report.as_view()),
     path("mocks/<uuid:mock_id>/leaderboard/", Leaderboard.as_view()),
     path("mocks/<uuid:mock_id>/review/", Review.as_view()),
