@@ -21,7 +21,8 @@
   gap: 2rem;
   padding: 1.1rem 2rem;
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
+  background: rgb(13 18 15 / 96%);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 12%);
 }
 .exam-brand {
   display: flex;
@@ -107,7 +108,7 @@
 }
 .exam-main {
   min-width: 0;
-  padding: 1.5rem 2.5rem;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
 }
 .exam-subjects {
   display: flex;
@@ -143,6 +144,10 @@
 }
 .exam-question {
   min-height: 25rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-bg-surface);
 }
 .exam-markdown {
   line-height: 1.8;
@@ -175,7 +180,7 @@
   align-items: center;
   gap: 0.8rem;
   border: 1px solid var(--color-border);
-  border-radius: 0.65rem;
+  border-radius: var(--radius-control);
   padding: 0.65rem 1rem;
   background: var(--color-bg-surface);
   cursor: pointer;
@@ -184,6 +189,7 @@
 .exam-options > label.option-selected {
   border-color: var(--color-brand-lime);
   background: rgb(183 255 0 / 6%);
+  box-shadow: inset 0 0 0 1px rgb(183 255 0 / 16%);
 }
 .exam-options input {
   width: 1rem;
@@ -206,7 +212,7 @@
 }
 .exam-secondary-actions button {
   border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-control);
   padding: 0.4rem 1rem;
   font-size: 0.8rem;
 }
@@ -221,7 +227,7 @@
 }
 .exam-numeric input {
   border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-control);
   min-height: 52px;
   padding: 0.7rem;
   max-width: 100%;
@@ -237,12 +243,12 @@
   justify-content: space-between;
   gap: 0.8rem;
   padding: 1.5rem 0;
-  border-top: 1px solid var(--color-border);
+  border-top: 0;
   margin-top: 2rem;
 }
 .exam-actions > button {
   padding: 0.6rem 1.1rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-control);
   font-size: 0.85rem;
 }
 .exam-submit-area {
@@ -555,8 +561,8 @@
   .exam-actions {
     position: sticky;
     bottom: 0;
-    background: var(--color-bg-primary);
-    padding: 0.85rem 0;
+    background: rgb(7 10 8 / 96%);
+    padding: 0.85rem 0 max(0.85rem, env(safe-area-inset-bottom));
     z-index: 2;
   }
   .exam-submit-area {

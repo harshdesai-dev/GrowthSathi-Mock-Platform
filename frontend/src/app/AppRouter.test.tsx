@@ -64,6 +64,18 @@ describe("Phase 1 route protection", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the public GrowthSathi landing page to a new visitor", () => {
+    renderRoute("/", authValue());
+    expect(
+      screen.getByRole("heading", {
+        name: /Exam ke din nahi. Aaj pata karo tum kaha stand karte ho./i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Explore mock tests" }),
+    ).toHaveAttribute("href", "/mocks");
+  });
+
   it("redirects an incomplete student to onboarding", async () => {
     renderRoute(
       "/dashboard",

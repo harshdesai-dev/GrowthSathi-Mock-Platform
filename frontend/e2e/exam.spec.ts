@@ -138,7 +138,7 @@ async function fixture(context: BrowserContext, cet = false) {
   return { state, saved, control };
 }
 
-for (const width of [360, 390, 430, 768, 1440]) {
+for (const width of [360, 390, 430, 768, 1024, 1440]) {
   test(`exam layout and accessible navigation at ${width}px`, async ({
     page,
     context,

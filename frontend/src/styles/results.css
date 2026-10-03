@@ -54,7 +54,7 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-top: 3px solid var(--color-accent);
-  border-radius: 16px;
+  border-radius: var(--radius-panel);
   padding: 28px 24px;
 }
 .results-main-score > p,
@@ -102,7 +102,7 @@
   gap: 1px;
   background: var(--color-border);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   overflow: hidden;
   margin: 20px 0 32px;
 }
@@ -183,7 +183,7 @@
 }
 .results-table-wrap {
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: var(--radius-panel);
   overflow: auto;
 }
 .results-table {
@@ -222,7 +222,7 @@
 }
 .results-review {
   border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   padding: 20px;
   background: var(--color-surface);
   min-width: 0;
@@ -271,7 +271,7 @@
 .results-answer-grid > section {
   padding: 18px;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   min-width: 0;
 }
 .results-answer-grid > section:last-child {
@@ -311,7 +311,7 @@
 .results-history li {
   padding: 22px;
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: var(--radius-panel);
   display: flex;
   flex-wrap: wrap;
   align-items: center;

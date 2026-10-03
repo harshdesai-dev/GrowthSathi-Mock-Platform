@@ -20,6 +20,21 @@
 
 :root {
   color-scheme: dark;
-  --focus-ring: 0 0 0 3px rgb(183 255 0 / 35%);
+  --focus-ring: 0 0 0 3px rgb(183 255 0 / 42%);
   --content-max: 75rem;
+  --content-reading: 48rem;
+  --space-1: 0.375rem;
+  --space-2: 0.625rem;
+  --space-3: 0.875rem;
+  --space-4: 1.125rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --radius-control: 0.75rem;
+  --radius-card: 1rem;
+  --radius-panel: 1.25rem;
+  --shadow-card: 0 1.25rem 3.5rem rgb(0 0 0 / 20%);
+  --shadow-brand-soft: 0 0 40px rgb(183 255 0 / 10%);
+  --transition-fast: 160ms ease;
 }

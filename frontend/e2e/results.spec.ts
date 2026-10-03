@@ -149,7 +149,7 @@ async function fixture(context: BrowserContext) {
   return control;
 }
 
-for (const width of [360, 390, 430, 768, 1440]) {
+for (const width of [360, 390, 430, 768, 1024, 1440]) {
   test(`published results, leaderboard and review fit ${width}px`, async ({
     page,
     context,

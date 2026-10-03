@@ -2,6 +2,7 @@ import type { PropsWithChildren } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../../auth/auth-context";
+import { LandingPage } from "../../pages/LandingPage";
 
 export function SessionLoadingPage() {
   return (
@@ -50,8 +51,7 @@ export function CompletedProfileRoute({ children }: PropsWithChildren) {
 export function HomeRoute() {
   const { status, user } = useAuth();
   if (status === "loading") return <SessionLoadingPage />;
-  if (status === "unauthenticated" || !user)
-    return <Navigate replace to="/auth" />;
+  if (status === "unauthenticated" || !user) return <LandingPage />;
   return (
     <Navigate
       replace
