@@ -141,3 +141,10 @@ command and inspect `showmigrations exams`. No earlier committed migration was e
 
 From `frontend`: `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`,
 `npm run build`. From the repository root: `git diff --check`.
+
+## Phase 5 result operations
+
+For scoring/publication and controlled post-publication key correction, see
+[Results operations](RESULTS.md). Earlier phase-specific verification notes above
+remain historical; use the result operations page, not a generic status transition,
+to publish verified results.

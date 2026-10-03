@@ -1,0 +1,16 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>{{ mock.title }} · {{ mock.status }} · Earliest publication: {{ mock.result_release_at }}</p>
+<p>Close → reconcile → verify answer key → calculate → inspect → publish. Publication is always manual.
+For a published-key correction, withdraw with a reason first. All student result access is hidden until republished.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Run confirmed operation</button></form>
+{% if outcome %}<h2>Reconciliation</h2><p>Eligible: {{ outcome.participant_count }}</p><pre>{{ outcome.excluded_attempts }}</pre>{% endif %}
+<h2>Calculation generations</h2>
+{% for run in runs %}
+<section><h3><a href="{% url 'admin:results_resultcalculationrun_change' run.pk %}">{{ run.id }}</a> — {{ run.status }}</h3>
+<p>Participants: {{ run.participant_count }} · Verified by {{ run.started_by }} at {{ run.key_verified_at }} · Completed: {{ run.completed_at }}</p>
+<p><a href="{% url 'admin:results_resultcalculationentry_changelist' %}?calculation_run__id__exact={{ run.pk }}">Inspect all scores, ranks and response snapshots</a></p>
+<p>{{ run.notes }} {{ run.errors }}</p><p>Excluded attempts: {{ run.excluded_attempts }}</p>
+{% if run.withdrawn_at %}<p>Withdrawn: {{ run.withdrawn_at }} by {{ run.withdrawn_by }} — {{ run.withdrawal_reason }}</p>{% endif %}</section>
+{% empty %}<p>No key verification or calculation yet.</p>{% endfor %}
+{% endblock %}

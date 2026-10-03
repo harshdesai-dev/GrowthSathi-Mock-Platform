@@ -177,6 +177,7 @@ class MockTestAdmin(OwnerAdmin):
         "status",
         "operations_link",
         "import_link",
+        "results_link",
     )
     list_filter = ("exam_type", "status")
     search_fields = ("title", "slug")
@@ -188,7 +189,16 @@ class MockTestAdmin(OwnerAdmin):
         "rules_source_notes",
         "operations_link",
         "import_link",
+        "results_link",
     )
+
+    def results_link(self, obj):
+        if obj and not obj._state.adding:
+            return format_html(
+                '<a href="{}">Result operations</a>',
+                reverse("admin:results_operations", args=[obj.pk]),
+            )
+        return "Save the draft first."
 
     def operations_link(self, obj):
         if obj and not obj._state.adding:
@@ -442,7 +452,8 @@ class QuestionAdmin(OwnerAdmin):
                 )
                 self.message_user(
                     request,
-                    "Answer key corrected and audited. No scores calculated in Phase 2.",
+                    "Answer key corrected and audited. Any draft was invalidated; "
+                    "verify and recalculate results.",
                     messages.SUCCESS,
                 )
                 return HttpResponseRedirect(

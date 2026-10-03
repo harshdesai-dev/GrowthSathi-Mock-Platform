@@ -2,16 +2,20 @@
 
 GrowthSathi JEE Main and MHT-CET PCM mock-test platform.
 
-Phases 0, 1, 1.5, 2, 3 and 4 are implemented: the production foundation, Google authentication,
+Phases 0, 1, 1.5, 2, 3, 4, 4.5 and 5 are implemented: the production foundation, Google authentication,
 secure browser sessions, student onboarding, owner access to Django Admin, versioned exam
 administration, question authoring, atomic CSV/XLSX imports, paper validation, explicit
 offers, verified Razorpay test-mode payments, mock access, and the reliable live exam engine.
-Results/scoring and the result dashboard remain for later phases. Live payments are disabled.
+Deterministic scoring, private published report cards, ranking, Mock Percentile, answer review
+and audited correction/republication are implemented. Phase 6 has not started. Live payments remain disabled.
+
+See [result operations](docs/RESULTS.md), [result architecture](docs/adr/0011-published-results.md)
+and [Phase 5 verification](docs/PHASE5_VERIFICATION.md).
 
 See [live exam operations](docs/LIVE_EXAMS.md),
 [exam architecture](docs/adr/0009-reliable-live-exam-engine.md), and
 [Phase 4 verification](docs/PHASE4_VERIFICATION.md) and
-[Phase 4.5 start-path hardening](docs/PHASE45_VERIFICATION.md). Phase 5 has not been started.
+[Phase 4.5 start-path hardening](docs/PHASE45_VERIFICATION.md).
 
 See [Phase 3 payments operations](docs/PAYMENTS.md),
 [payment architecture](docs/adr/0008-offers-payments-and-access.md) and

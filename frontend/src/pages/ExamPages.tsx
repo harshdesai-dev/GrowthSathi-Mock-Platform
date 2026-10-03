@@ -499,7 +499,7 @@ export function ExamPage() {
         </p>
         <p>
           Only answers accepted before their phase deadline were retained.
-          Results are not available here.
+          Results become available after Admin publishes the verified batch.
         </p>
         {pending > 0 && (
           <p className="exam-warning">
@@ -507,7 +507,10 @@ export function ExamPage() {
             added after closure.
           </p>
         )}
-        <Link to="/dashboard" className="primary-button">
+        <Link to={`/results/${state.mock_id}`} className="primary-button">
+          Check results
+        </Link>
+        <Link to="/dashboard" className="secondary-button">
           Back to my account
         </Link>
       </main>

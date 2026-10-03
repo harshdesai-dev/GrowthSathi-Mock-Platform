@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import growthSathiLogo from "../assets/brand/growthsathi-logo.png";
 import { useAuth } from "../auth/auth-context";
@@ -52,7 +52,7 @@ export function DashboardPage() {
         </h1>
         <p>
           Your secure GrowthSathi account and student profile are ready. Browse
-          available offers below. The exam interface arrives in a later phase.
+          available offers below or open your published results.
         </p>
         <dl>
           <div>
@@ -71,6 +71,9 @@ export function DashboardPage() {
         ) : null}
       </section>
       <PurchasedAccess />
+      <Link to="/results" className="secondary-button">
+        View result history
+      </Link>
     </main>
   );
 }

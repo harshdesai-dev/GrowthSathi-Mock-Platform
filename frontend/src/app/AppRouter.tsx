@@ -25,10 +25,48 @@ const ExamInstructionsPage = lazy(() =>
 const ExamPage = lazy(() =>
   import("../pages/ExamPages").then((module) => ({ default: module.ExamPage })),
 );
+const ResultPage = lazy(() =>
+  import("../pages/ResultPages").then((module) => ({
+    default: module.ResultPage,
+  })),
+);
+const LeaderboardPage = lazy(() =>
+  import("../pages/ResultPages").then((module) => ({
+    default: module.LeaderboardPage,
+  })),
+);
+const ReviewPage = lazy(() =>
+  import("../pages/ResultPages").then((module) => ({
+    default: module.ReviewPage,
+  })),
+);
+const ResultHistoryPage = lazy(() =>
+  import("../pages/ResultPages").then((module) => ({
+    default: module.ResultHistoryPage,
+  })),
+);
 
 export function AppRoutes() {
   return (
     <Routes>
+      {[
+        { path: "/results", element: <ResultHistoryPage /> },
+        { path: "/results/:mockId", element: <ResultPage /> },
+        { path: "/results/:mockId/leaderboard", element: <LeaderboardPage /> },
+        { path: "/results/:mockId/review", element: <ReviewPage /> },
+      ].map((route) => (
+        <Route
+          key={route.path}
+          path={route.path}
+          element={
+            <CompletedProfileRoute>
+              <Suspense fallback={<p role="status">Loading results…</p>}>
+                {route.element}
+              </Suspense>
+            </CompletedProfileRoute>
+          }
+        />
+      ))}
       <Route
         path="/mocks/:mockId/instructions"
         element={

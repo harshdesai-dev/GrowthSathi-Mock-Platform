@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.exams",
     "apps.commerce",
     "apps.attempts",
+    "apps.results",
 ]
 
 MIDDLEWARE = [

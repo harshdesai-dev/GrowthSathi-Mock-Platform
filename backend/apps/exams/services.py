@@ -96,7 +96,9 @@ def transition_mock(mock_id: UUID, target: str, *, actor: User) -> MockTest:
     if target == MockTest.Status.RESULTS_PUBLISHED:
         if timezone.now() < mock.result_release_at:
             raise ValidationError("Earliest result-publication time has not arrived.")
-        raise ValidationError("Publication requires verified calculations; implemented in Phase 5.")
+        raise ValidationError(
+            "Publication requires verified calculations; use the result operations page."
+        )
     if target in {"REGISTRATION_OPEN", "SCHEDULED", "LIVE"}:
         validate_paper(mock).require_valid()
         if not mock.rules_verified_at or not mock.rules_source_notes:
@@ -183,4 +185,9 @@ def correct_answer_key(
                 new_value=new,
                 reason=reason.strip(),
             )
+    # The result service uses the same mock-row lock: correction and publication
+    # cannot race. Published keys first require explicit audited withdrawal.
+    from apps.results.services import invalidate_drafts
+
+    invalidate_drafts(mock.pk, "Answer key corrected; verify and calculate a new result batch.")
     return question
