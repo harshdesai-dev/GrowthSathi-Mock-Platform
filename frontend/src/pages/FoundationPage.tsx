@@ -1,4 +1,4 @@
-import growthSathiLogo from "../assets/brand/growthsathi-logo.png";
+import growthSathiLogo from "../assets/brand/growthsathi-logo.webp";
 
 export function FoundationPage() {
   return (

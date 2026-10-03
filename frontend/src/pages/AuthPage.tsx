@@ -2,7 +2,7 @@ import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import growthSathiLogo from "../assets/brand/growthsathi-logo.png";
+import growthSathiLogo from "../assets/brand/growthsathi-logo.webp";
 import { useAuth } from "../auth/auth-context";
 
 export function AuthPage() {

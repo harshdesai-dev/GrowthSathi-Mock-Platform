@@ -8,7 +8,7 @@ import {
 } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/auth-context";
-import logo from "../assets/brand/growthsathi-logo.png";
+import logo from "../assets/brand/growthsathi-logo.webp";
 import {
   examApi,
   type Answer,

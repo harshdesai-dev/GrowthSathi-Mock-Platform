@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 
-import growthSathiLogo from "../assets/brand/growthsathi-logo.png";
+import growthSathiLogo from "../assets/brand/growthsathi-logo.webp";
 import type { ProfileInput } from "../api/client";
 import { useAuth } from "../auth/auth-context";
 

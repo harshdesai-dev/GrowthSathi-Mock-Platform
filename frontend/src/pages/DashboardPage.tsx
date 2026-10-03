@@ -6,7 +6,7 @@ import {
   type DashboardData,
   type DashboardMock,
 } from "../api/dashboard";
-import growthSathiLogo from "../assets/brand/growthsathi-logo.png";
+import growthSathiLogo from "../assets/brand/growthsathi-logo.webp";
 import { useAuth } from "../auth/auth-context";
 import { difference, marks } from "../results/format";
 import "../styles/dashboard.css";

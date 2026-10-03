@@ -25,7 +25,7 @@ import {
   type Offer,
   type Order,
 } from "../api/commerce";
-import growthSathiLogo from "../assets/brand/growthsathi-logo.png";
+import growthSathiLogo from "../assets/brand/growthsathi-logo.webp";
 import { useAuth } from "../auth/auth-context";
 import { openCheckout } from "../payments/razorpay";
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import { Link, useParams } from "react-router-dom";
 import { resultsApi, type ReviewQuestion } from "../api/results";
 import { useAuth } from "../auth/auth-context";
-import logo from "../assets/brand/growthsathi-logo.png";
+import logo from "../assets/brand/growthsathi-logo.webp";
 import { Markdown } from "../exam/Markdown";
 import { safeImage } from "../exam/urls";
 import "../styles/results.css";
