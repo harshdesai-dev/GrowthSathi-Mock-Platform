@@ -6,9 +6,14 @@ import { defineConfig } from "vitest/config";
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, "..", "VITE_");
   const allowed = new Set(["VITE_API_BASE_URL", "VITE_GOOGLE_CLIENT_ID"]);
-  if (Object.keys(env).some((key) => !allowed.has(key))) {
+
+  const unexpected = Object.keys(env).filter(
+      (key) => !allowed.has(key) && !key.startsWith("VITE_VERCEL_"),
+    );
+
+  if (unexpected.length > 0) {
     throw new Error(
-      "Only the API URL and Google public client ID may use VITE_ variables.",
+      "Only approved frontend variables and Vercel system variables may use VITE_.",
     );
   }
   if (command === "build") {
