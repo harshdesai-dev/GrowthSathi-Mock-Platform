@@ -18,7 +18,10 @@ def logged_in_client(db, monkeypatch, settings):
             last_name="Student",
         ),
     )
-    login = api_client.post(reverse("auth-google"), {"credential": "valid"}, format="json")
+    csrf = api_client.get(reverse("auth-csrf")).json()["csrf_token"]
+    login = api_client.post(
+        reverse("auth-google"), {"credential": "valid"}, format="json", HTTP_X_CSRFTOKEN=csrf
+    )
     assert login.status_code == 201
     assert settings.CSRF_COOKIE_NAME in api_client.cookies
     return api_client, login

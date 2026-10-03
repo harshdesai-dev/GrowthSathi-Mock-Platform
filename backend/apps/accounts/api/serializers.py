@@ -6,7 +6,7 @@ from apps.accounts.phone import normalize_indian_mobile
 
 
 class GoogleAuthSerializer(serializers.Serializer):
-    credential = serializers.CharField(trim_whitespace=True)
+    credential = serializers.CharField(trim_whitespace=True, max_length=16384)
 
 
 class MeSerializer(serializers.ModelSerializer):

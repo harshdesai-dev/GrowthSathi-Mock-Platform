@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import logging
 from contextlib import contextmanager
 from functools import wraps
 
@@ -18,6 +19,8 @@ from apps.exams.validation import validate_paper
 
 from .models import Result, ResultCalculationEntry, ResultCalculationRun, service_write
 from .scoring import METRICS, participant_reason, rank_scores, score_attempt
+
+logger = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -37,7 +40,16 @@ def operation(function):
             result = function(*args, actor=actor, **kwargs)
         # A rejected operation may intentionally commit reconciliation/invalidation.
         if isinstance(result, ValidationError):
+            logger.warning("result_operation_rejected operation=%s", function.__name__)
             raise result
+        transaction.on_commit(
+            lambda: logger.info(
+                "result_operation operation=%s record=%s status=%s",
+                function.__name__,
+                getattr(result, "pk", "reconciliation"),
+                getattr(result, "status", "complete"),
+            )
+        )
         return result
 
     return wrapped

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import partial
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -36,7 +37,7 @@ def verify_google_id_token(credential: str) -> GoogleIdentity:
     try:
         claims = google_id_token.verify_oauth2_token(
             credential,
-            google_requests.Request(),
+            partial(google_requests.Request(), timeout=5),
             audience=settings.GOOGLE_CLIENT_ID,
         )
     except (GoogleAuthError, ValueError) as exc:

@@ -14,6 +14,11 @@ jobs:
     defaults:
       run:
         working-directory: frontend
+    env:
+      VITE_API_BASE_URL: https://api.example.com/api/v1
+      VITE_GOOGLE_CLIENT_ID: ci.apps.googleusercontent.com
+      RAZORPAY_KEY_SECRET: ci-synthetic-payment-secret-sentinel
+      RAZORPAY_WEBHOOK_SECRET: ci-synthetic-webhook-secret-sentinel
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,6 +35,7 @@ jobs:
       - run: npm run test:browser
       - run: npm run build
       - run: npm run build:check-secrets
+      - run: npm audit --audit-level=high
 
   backend:
     runs-on: ubuntu-latest
@@ -52,10 +58,20 @@ jobs:
         working-directory: backend
     env:
       DJANGO_SETTINGS_MODULE: config.settings.test
-      DJANGO_SECRET_KEY: ci-only-not-a-production-secret
+      DJANGO_SECRET_KEY: ci-only-synthetic-django-key-ABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789
       DATABASE_URL: postgresql://growthsathi:growthsathi@localhost:5432/growthsathi_test
       GOOGLE_CLIENT_ID: ci-readiness-check.apps.googleusercontent.com
-      JWT_SECRET: ci-only-jwt-signing-key-at-least-thirty-two-bytes-long
+      JWT_SECRET: ci-only-synthetic-jwt-key-abcdefghijklmnopqrstuvwxyz-0123456789-ABC
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: api.example.com
+      FRONTEND_URL: https://app.example.com
+      CORS_ALLOWED_ORIGINS: https://app.example.com
+      CSRF_TRUSTED_ORIGINS: https://app.example.com
+      RAZORPAY_KEY_ID: rzp_test_synthetic
+      RAZORPAY_KEY_SECRET: ci-synthetic-payment-secret
+      RAZORPAY_WEBHOOK_SECRET: ci-synthetic-webhook-secret
+      DJANGO_TRUST_PROXY_HEADERS: "true"
+      TRUSTED_PROXY_COUNT: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -69,5 +85,12 @@ jobs:
       - run: python manage.py migrate --noinput
       - run: python manage.py makemigrations --check --dry-run
       - run: python -m pytest
-      - run: python manage.py spectacular --validate --file /tmp/openapi.yml
-      - run: python manage.py check --deploy --settings=config.settings.production
+      - run: python manage.py spectacular --validate --fail-on-warn --file /tmp/openapi.yml
+      - run: python manage.py check --deploy --fail-level WARNING --settings=config.settings.production
+        env:
+          DATABASE_URL: postgresql://synthetic.invalid/config-check?sslmode=require
+      - run: python manage.py collectstatic --noinput --settings=config.settings.production
+        env:
+          DATABASE_URL: postgresql://synthetic.invalid/config-check?sslmode=require
+      - run: python -m pip install pip-audit
+      - run: python -m pip_audit

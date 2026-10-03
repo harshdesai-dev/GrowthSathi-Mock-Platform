@@ -4,8 +4,14 @@ import { join } from "node:path";
 const forbidden = [
   "RAZORPAY_KEY_SECRET",
   "RAZORPAY_WEBHOOK_SECRET",
+  "DJANGO_SECRET_KEY",
+  "JWT_SECRET",
+  "DATABASE_URL",
   process.env.RAZORPAY_KEY_SECRET,
   process.env.RAZORPAY_WEBHOOK_SECRET,
+  process.env.DJANGO_SECRET_KEY,
+  process.env.JWT_SECRET,
+  process.env.DATABASE_URL,
 ].filter(Boolean);
 
 async function inspect(directory) {

@@ -39,6 +39,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "apps.common.observability.RequestContextMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -99,6 +100,8 @@ AUTH_USER_MODEL = "accounts.User"
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "http://localhost:5173")
 CORS_ALLOW_CREDENTIALS = True
+CORS_URLS_REGEX = r"^/api/"
+CORS_EXPOSE_HEADERS = ["X-Request-ID", "Retry-After"]
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -107,6 +110,7 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "apps.common.api.exceptions.api_exception_handler",
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "NUM_PROXIES": 0,
 }
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
@@ -145,10 +149,11 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
+        "safe_json": {"()": "apps.common.observability.SafeJsonFormatter"},
         "standard": {
             "format": "{asctime} {levelname} {name} {message}",
             "style": "{",
-        }
+        },
     },
     "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "standard"}},
     "root": {"handlers": ["console"], "level": os.getenv("LOG_LEVEL", "INFO")},

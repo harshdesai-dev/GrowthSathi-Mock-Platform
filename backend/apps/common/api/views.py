@@ -1,5 +1,5 @@
 from django.db import connections
-from django.db.utils import OperationalError
+from django.db.utils import DatabaseError, InterfaceError
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
@@ -25,7 +25,7 @@ class ReadinessView(APIView):
             with connections["default"].cursor() as cursor:
                 cursor.execute("SELECT 1")
                 cursor.fetchone()
-        except OperationalError:
+        except (DatabaseError, InterfaceError):
             return Response(
                 {"status": "unavailable", "checks": {"database": "unavailable"}},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,

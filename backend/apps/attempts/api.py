@@ -7,6 +7,7 @@ from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
 
 from apps.commerce.api import StrictSerializer
+from apps.common.throttles import StartThrottle
 
 from . import services
 from .student_payload import StudentQuestionSerializer, student_paper
@@ -121,6 +122,8 @@ class ExamView(APIView):
 
 
 class Start(ExamView):
+    throttle_classes = [StartThrottle]
+
     @extend_schema(request=EmptyInput, responses=StateSerializer)
     def post(self, request, mock_id):
         self.empty(request)

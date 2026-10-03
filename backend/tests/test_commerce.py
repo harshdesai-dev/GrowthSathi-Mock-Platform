@@ -35,6 +35,7 @@ from apps.commerce.services import (
     create_order,
     process_webhook,
     reconcile_gateway_order,
+    reconcile_gateway_payment,
     record_manual_refund,
     revoke_access,
     set_offer_active,
@@ -161,6 +162,30 @@ def remote_payment(order, gateway, *, identity="pay_sample", status="captured"):
 
 def sign(value, secret="test-only-key-secret"):
     return hmac.new(secret.encode(), value.encode(), hashlib.sha256).hexdigest()
+
+
+def test_owner_recovers_missed_capture_idempotently(catalogue, student, owner, gateway):
+    _, offers = catalogue
+    order = create_order(student, offers["COMBO"].pk)
+    remote_payment(order, gateway)
+    for _ in range(2):
+        assert reconcile_gateway_payment(order.pk, "pay_sample", actor=owner).status == "PAID"
+    assert Payment.objects.filter(order=order).count() == 1
+    assert MockAccessGrant.objects.filter(student=student, status="ACTIVE").count() == 2
+
+
+def test_owner_recovery_rejects_student_and_wrong_payment(catalogue, student, owner, gateway):
+    from django.core.exceptions import PermissionDenied
+
+    _, offers = catalogue
+    order = create_order(student, offers["JEE"].pk)
+    remote_payment(order, gateway)
+    with pytest.raises(PermissionDenied):
+        reconcile_gateway_payment(order.pk, "pay_sample", actor=student)
+    gateway["payments"]["pay_sample"]["amount"] += 1
+    with pytest.raises(ValidationError):
+        reconcile_gateway_payment(order.pk, "pay_sample", actor=owner)
+    assert not MockAccessGrant.objects.filter(student=student).exists()
 
 
 def callback(order, student, identity="pay_sample"):

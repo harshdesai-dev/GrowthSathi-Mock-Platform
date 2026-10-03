@@ -1,7 +1,11 @@
+import logging
 from typing import Any
 
+from django.conf import settings
 from rest_framework.response import Response
-from rest_framework.views import exception_handler
+from rest_framework.views import exception_handler, set_rollback
+
+logger = logging.getLogger(__name__)
 
 
 def _error_code(data: Any, status_code: int) -> str:
@@ -15,7 +19,14 @@ def _error_code(data: Any, status_code: int) -> str:
 def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response | None:
     response = exception_handler(exc, context)
     if response is None:
-        return None
+        if settings.DEBUG:
+            return None
+        set_rollback()
+        logger.error("api_unhandled_exception", exc_info=True)
+        return Response(
+            {"error": {"code": "server_error", "message": "Something went wrong. Please retry."}},
+            status=500,
+        )
 
     original_data = response.data
     if isinstance(original_data, dict) and "detail" in original_data:

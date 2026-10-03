@@ -10,11 +10,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.serializers import TokenRefreshSerializer
-from rest_framework_simplejwt.settings import api_settings as jwt_api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.accounts.models import User
 from apps.accounts.services import (
     GoogleTokenVerificationError,
     IdentityConflictError,
@@ -22,6 +19,8 @@ from apps.accounts.services import (
     resolve_google_identity,
     verify_google_id_token,
 )
+from apps.accounts.sessions import revoke_session, rotate_session
+from apps.common.throttles import LoginThrottle, ReadThrottle, SessionThrottle
 
 from .serializers import (
     CsrfTokenSerializer,
@@ -90,8 +89,9 @@ class CsrfTokenView(APIView):
         return Response({"csrf_token": get_token(request)})
 
 
-@method_decorator(ensure_csrf_cookie, name="dispatch")
+@method_decorator(csrf_protect, name="dispatch")
 class GoogleAuthView(APIView):
+    throttle_classes = [LoginThrottle]
     authentication_classes: list = []
     permission_classes = [AllowAny]
 
@@ -130,6 +130,7 @@ class GoogleAuthView(APIView):
 
 @method_decorator(csrf_protect, name="dispatch")
 class RefreshView(APIView):
+    throttle_classes = [SessionThrottle]
     authentication_classes: list = []
     permission_classes = [AllowAny]
 
@@ -141,31 +142,24 @@ class RefreshView(APIView):
                 "A refresh session is required.", code="no_refresh_token"
             )
         try:
-            refresh = RefreshToken(token)
+            data = rotate_session(token)
         except TokenError as exc:
             raise PublicAuthenticationError(
                 "The refresh session is invalid.", code="invalid_refresh"
             ) from exc
-        if not User.objects.filter(
-            pk=refresh[jwt_api_settings.USER_ID_CLAIM], is_active=True
-        ).exists():
-            raise PublicAuthenticationError("This account is disabled.", code="account_disabled")
-        serializer = TokenRefreshSerializer(data={"refresh": token})
-        try:
-            serializer.is_valid(raise_exception=True)
-        except TokenError as exc:
+        except InactiveUserError as exc:
             raise PublicAuthenticationError(
-                "The refresh session is invalid.", code="invalid_refresh"
+                "This account is disabled.", code="account_disabled"
             ) from exc
 
         response = Response(
             {
-                "access_token": serializer.validated_data["access"],
+                "access_token": data["access"],
                 "token_type": "Bearer",
                 "expires_in": int(settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds()),
             }
         )
-        _set_refresh_cookie(response, serializer.validated_data["refresh"])
+        _set_refresh_cookie(response, data["refresh"])
         return response
 
 
@@ -179,7 +173,7 @@ class LogoutView(APIView):
         token = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE_NAME)
         if token:
             try:
-                RefreshToken(token).blacklist()
+                revoke_session(token)
             except TokenError:
                 pass
         response = Response(status=status.HTTP_204_NO_CONTENT)
@@ -188,6 +182,7 @@ class LogoutView(APIView):
 
 
 class MeView(APIView):
+    throttle_classes = [ReadThrottle]
     permission_classes = [IsAuthenticated]
 
     @extend_schema(responses={200: MeSerializer})
@@ -196,6 +191,7 @@ class MeView(APIView):
 
 
 class ProfileView(APIView):
+    throttle_classes = [ReadThrottle]
     permission_classes = [IsAuthenticated]
 
     @extend_schema(responses={200: StudentProfileSerializer})

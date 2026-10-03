@@ -63,9 +63,11 @@ async function getCsrfToken(): Promise<string> {
   return response.csrf_token;
 }
 
-export function exchangeGoogleCredential(credential: string) {
+export async function exchangeGoogleCredential(credential: string) {
+  const csrfToken = await getCsrfToken();
   return apiRequest<SessionResponse & { user: AuthUser }>("/auth/google/", {
     method: "POST",
+    headers: { "X-CSRFToken": csrfToken },
     body: JSON.stringify({ credential }),
   });
 }

@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common.throttles import OrderThrottle, ReadThrottle, VerifyThrottle
 from apps.exams.models import MockTest
 
 from .gateway import GatewayUnavailable, public_key
@@ -167,6 +168,7 @@ class WebhookPayloadSerializer(serializers.Serializer):
 
 
 class CommerceView(APIView):
+    throttle_classes = [ReadThrottle]
     permission_classes = [IsAuthenticated]
 
     def handle_exception(self, exc):
@@ -236,6 +238,8 @@ class OfferDetail(CommerceView):
 
 
 class CreateOrder(CommerceView):
+    throttle_classes = [OrderThrottle]
+
     @extend_schema(request=CreateOrderSerializer, responses=OrderSerializer)
     def post(self, request):
         serializer = CreateOrderSerializer(data=request.data)
@@ -251,6 +255,8 @@ class OrderDetail(CommerceView):
 
 
 class VerifyPayment(CommerceView):
+    throttle_classes = [VerifyThrottle]
+
     @extend_schema(request=VerifySerializer, responses=OrderSerializer)
     def post(self, request):
         serializer = VerifySerializer(data=request.data)
@@ -267,6 +273,8 @@ class VerifyPayment(CommerceView):
 
 
 class PaymentWebhook(CommerceView):
+    # Provider retries must not share a student/IP throttle bucket.
+    throttle_classes = []
     authentication_classes = []
     permission_classes = [AllowAny]
 

@@ -6,6 +6,8 @@ outside database transactions; durable CREATED receipts survive network failure.
 
 import hashlib
 import json
+import logging
+import re
 from contextlib import contextmanager
 from datetime import timedelta
 
@@ -39,6 +41,7 @@ ORDER_TRANSITIONS = {
     "REFUNDED": set(),
 }
 REFUND_REASONS = {"MOCK_CANCELLED", "DUPLICATE_VERIFIED_PAYMENT", "PLATFORM_FAILURE"}
+logger = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -124,6 +127,7 @@ def gateway_call(operation):
         raise
     except Exception as exc:
         # Never expose gateway exception bodies, which may contain private information.
+        logger.warning("payment_provider_unavailable")
         raise GatewayUnavailable() from exc
 
 
@@ -222,6 +226,24 @@ def reconcile_gateway_order(order_id, gateway_order_id, *, actor):
     gateway = RazorpayGateway()
     remote = gateway_call(lambda: gateway.fetch_order(gateway_order_id))
     return attach_gateway_order(order_id, remote)
+
+
+def reconcile_gateway_payment(order_id, payment_id, *, actor):
+    """Recover a missed callback/webhook by fetching provider truth; never capture/charge."""
+    require_owner(actor)
+    if not re.fullmatch(r"pay_[A-Za-z0-9]{1,96}", payment_id):
+        raise ValidationError("A valid provider payment reference is required.")
+    order = Order.objects.get(pk=order_id)
+    if not order.gateway_order_id:
+        raise ValidationError("Link the verified gateway order first.")
+    gateway = RazorpayGateway()
+    payment = gateway_call(lambda: gateway.fetch_payment(payment_id))
+    if payment.get("id") != payment_id:
+        raise ValidationError("Gateway payment identity mismatch.")
+    remote_order = gateway_call(lambda: gateway.fetch_order(order.gateway_order_id))
+    result = reconcile_payment(order.pk, payment, remote_order)
+    logger.info("owner_payment_reconciliation order=%s actor=%s", result.pk, actor.pk)
+    return result
 
 
 def verify_payment(student, order_id, gateway_order_id, payment_id, signature):
@@ -325,6 +347,9 @@ def reconcile_payment(order_id, remote, remote_order, *, signature=""):
         elif status == "FAILED" and order.status == "PENDING":
             transition(order, "FAILED")
             order.save()
+    transaction.on_commit(
+        lambda: logger.info("payment_reconciled order=%s status=%s", order.pk, order.status)
+    )
     return order
 
 

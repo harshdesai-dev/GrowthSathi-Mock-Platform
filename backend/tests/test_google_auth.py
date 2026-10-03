@@ -18,6 +18,26 @@ VALID_IDENTITY = GoogleIdentity(
 )
 
 
+def test_google_certificate_lookup_has_bounded_network_timeout(monkeypatch, settings):
+    settings.GOOGLE_CLIENT_ID = "test.apps.googleusercontent.com"
+    transport = Mock()
+    monkeypatch.setattr("apps.accounts.services.google_requests.Request", lambda: transport)
+
+    def verify(credential, request, audience):
+        request("https://www.googleapis.com/oauth2/v1/certs", method="GET")
+        return {
+            "iss": "accounts.google.com",
+            "aud": audience,
+            "email_verified": True,
+            "sub": "bounded",
+            "email": "bounded@example.com",
+        }
+
+    monkeypatch.setattr("apps.accounts.services.google_id_token.verify_oauth2_token", verify)
+    assert verify_google_id_token("synthetic").sub == "bounded"
+    assert transport.call_args.kwargs["timeout"] == 5
+
+
 @pytest.mark.django_db
 def test_valid_google_login_creates_user_profile_and_secure_session(client, monkeypatch, settings):
     settings.AUTH_REFRESH_COOKIE_SECURE = True

@@ -29,5 +29,6 @@ def test_exception_handler_uses_shared_envelope(settings):
     assert response.data["error"]["details"] == {"field": ["This field is required."]}
 
 
-def test_exception_handler_returns_none_for_unknown_exception():
+def test_exception_handler_returns_none_for_unknown_exception_in_debug(settings):
+    settings.DEBUG = True
     assert api_exception_handler(RuntimeError("boom"), {}) is None

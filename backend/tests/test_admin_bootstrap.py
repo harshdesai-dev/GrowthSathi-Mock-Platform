@@ -95,3 +95,15 @@ def test_password_session_cannot_authenticate_to_product_api(client):
 
     response = client.get(reverse("auth-me"))
     assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_owner_admin_cannot_assign_student_password_or_create_password_user(client):
+    owner = User.objects.create_superuser(email="owner@example.com", google_sub="owner")
+    student = User.objects.create_user(email="student@example.com", google_sub="student")
+    client.force_login(owner)
+    response = client.get(reverse("admin:auth_user_password_change", args=[student.pk]))
+    assert response.status_code == 403
+    assert client.get(reverse("admin:accounts_user_add")).status_code == 403
+    student.refresh_from_db()
+    assert not student.has_usable_password()
