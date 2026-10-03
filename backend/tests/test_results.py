@@ -562,3 +562,24 @@ def test_postgres_duplicate_verify_and_calculate_starts():
     assert identities[0] == identities[1]
     assert ResultCalculationRun.objects.count() == 1
     assert ResultCalculationEntry.objects.count() == 3
+
+
+def test_dashboard_is_authenticated_private_and_only_exposes_published_results(batch):
+    mock, owner, students, _, _ = batch
+    anonymous = APIClient().get("/api/v1/dashboard/")
+    assert anonymous.status_code == 401
+
+    before = client(students[0]).get("/api/v1/dashboard/")
+    assert before.status_code == 200
+    assert before.data["latest_result"] is None
+    assert all("email" not in str(item) for item in before.data["upcoming_mocks"])
+
+    run = calculated(mock, owner)
+    publish_results(run.pk, actor=owner)
+    published = client(students[0]).get("/api/v1/dashboard/")
+    assert published.status_code == 200
+    assert published["Cache-Control"] == "private, no-store"
+    assert published.data["latest_result"]["mock_id"] == str(mock.pk)
+    assert published.data["latest_result"]["score"] == "4.00"
+    assert published.data["history"][0]["mock_id"] == str(mock.pk)
+    assert "student_name" not in str(published.data)
