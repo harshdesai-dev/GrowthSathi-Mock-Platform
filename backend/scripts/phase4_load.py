@@ -14,6 +14,7 @@ import threading
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -41,6 +42,8 @@ def main():
     parser.add_argument("--concurrency", type=int, default=100)
     parser.add_argument("--threads", type=int, default=32)
     parser.add_argument("--port", type=int, default=8094)
+    parser.add_argument("--start-only", action="store_true")
+    parser.add_argument("--profile", action="store_true")
     args = parser.parse_args()
     if connection.vendor != "postgresql" or not settings.DATABASES["default"]["NAME"].endswith(
         "phase4_load"
@@ -69,8 +72,17 @@ def main():
     print(
         f"Seeded {args.students} synthetic paid CET students; full 150-question paper.", flush=True
     )
+    # Fixture authoring must not pre-warm start-path validation. Each invocation
+    # measures a cold process (the first starts also lazily activate SCHEDULED).
+    from apps.exams import validation
+    from scripts.start_probe import StartProbe
+
+    if hasattr(validation, "_row_field_errors"):
+        validation._row_field_errors.cache_clear()
+
+    probe = StartProbe() if args.profile else None
     server = create_server(
-        get_wsgi_application(),
+        probe.wrap(get_wsgi_application()) if probe else get_wsgi_application(),
         host="127.0.0.1",
         port=args.port,
         threads=args.threads,
@@ -87,6 +99,7 @@ def main():
     }
     base = f"http://127.0.0.1:{args.port}/api/v1"
     local = threading.local()
+    http_outside_app = []
 
     def request(student, path, method="POST", payload=None, expected=200):
         if not hasattr(local, "session"):
@@ -101,6 +114,8 @@ def main():
                 timeout=60,
             )
             elapsed = (time.perf_counter() - start) * 1000
+            if "X-Start-Profile-App-Ms" in response.headers:
+                http_outside_app.append(elapsed - float(response.headers["X-Start-Profile-App-Ms"]))
             if response.status_code != expected:
                 return elapsed, response.status_code, False
             if path.endswith("/start/"):
@@ -160,6 +175,7 @@ def main():
         with (
             ThreadPoolExecutor(max_workers=args.concurrency) as pool,
             patch("apps.attempts.services.timezone.now") as clock,
+            probe if probe else nullcontext(),
         ):
             phase_time = mock.starts_at + timedelta(minutes=5)
             reference = time.perf_counter()
@@ -169,6 +185,16 @@ def main():
             burst(
                 "simultaneous_starts", lambda s: request(s, f"/mocks/{mock.pk}/start/", payload={})
             )
+            if probe:
+                from scripts.start_probe import distribution
+
+                probe.report()
+                print("HTTP_OUTSIDE_APP " + json.dumps(distribution(http_outside_app)), flush=True)
+            if args.start_only:
+                assert Attempt.objects.count() == args.students
+                assert Attempt.objects.filter(status="IN_PROGRESS").count() == args.students
+                print("START_INTEGRITY PASS: one active attempt per student", flush=True)
+                return
             burst("full_pc_paper", lambda s: request(s, f"/attempts/{s['attempt']}/paper/", "GET"))
             burst(
                 "synchronized_heartbeat",

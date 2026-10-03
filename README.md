@@ -10,7 +10,8 @@ Results/scoring and the result dashboard remain for later phases. Live payments 
 
 See [live exam operations](docs/LIVE_EXAMS.md),
 [exam architecture](docs/adr/0009-reliable-live-exam-engine.md), and
-[Phase 4 verification](docs/PHASE4_VERIFICATION.md). Phase 5 has not been started.
+[Phase 4 verification](docs/PHASE4_VERIFICATION.md) and
+[Phase 4.5 start-path hardening](docs/PHASE45_VERIFICATION.md). Phase 5 has not been started.
 
 See [Phase 3 payments operations](docs/PAYMENTS.md),
 [payment architecture](docs/adr/0008-offers-payments-and-access.md) and

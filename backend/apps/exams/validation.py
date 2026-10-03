@@ -2,6 +2,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from datetime import timedelta
 from decimal import Decimal
+from functools import lru_cache
 
 from django.core.exceptions import ValidationError
 
@@ -25,9 +26,10 @@ class ValidationResult:
             raise ValidationError(self.errors)
 
 
-def validate_scheme(scheme: ExamScheme) -> ValidationResult:
+def validate_scheme(scheme: ExamScheme, *, phases=None) -> ValidationResult:
     result = ValidationResult()
-    phases = list(scheme.phases.prefetch_related("rules").all())
+    if phases is None:
+        phases = list(scheme.phases.prefetch_related("rules").all())
     if not phases:
         result.errors.append("Scheme has no phases.")
     offset, count, marks = 0, 0, Decimal(0)
@@ -61,13 +63,50 @@ def validate_scheme(scheme: ExamScheme) -> ValidationResult:
     return result
 
 
+@lru_cache(maxsize=2560)
+def _row_field_errors(model, values, exclude):
+    """Memoize ONLY pure field validation by exact content, never paper validity.
+
+    Paper validation reads current database rows each time. Changed content (even a raw SQL
+    edit without a timestamp update) gets a different key. No ORM instance is
+    shared, no DB-dependent checks are cached, and eviction/restart is harmless.
+    Answer-key material stays private to this bounded, process-local cache.
+    """
+    row = model(**dict(zip(_row_fields(model), values, strict=True)))
+    try:
+        row.clean_fields(exclude=(*exclude, "created_at", "updated_at"))
+    except ValidationError as exc:
+        return tuple(exc.messages)
+    return ()
+
+
+@lru_cache(maxsize=2)
+def _row_fields(model):
+    # Audit timestamps are database-typed metadata, not paper content. Avoid
+    # decoding 1,500 unused timestamps for every 150-question CET paper check.
+    return tuple(
+        field.attname
+        for field in model._meta.concrete_fields
+        if field.name not in {"created_at", "updated_at"}
+    )
+
+
+def _field_errors(row, model, exclude):
+    if not isinstance(row, tuple):
+        # Preserve model-field normalization for unsaved authoring/import rows.
+        # Only database scalar rows take the content-keyed memoization path.
+        try:
+            row.clean_fields(exclude=exclude)
+        except ValidationError as exc:
+            return tuple(exc.messages)
+        return ()
+    return _row_field_errors(model, tuple(row), exclude)
+
+
 def validate_answers(question: Question, options: list[QuestionOption]) -> list[str]:
     errors = []
     for option in options:
-        try:
-            option.clean_fields(exclude=["question"])
-        except ValidationError as exc:
-            errors.extend(exc.messages)
+        errors.extend(_field_errors(option, QuestionOption, ("question",)))
     if question.question_type == QuestionType.MCQ_SINGLE:
         if len(options) != 4 or {o.label for o in options} != set("ABCD"):
             errors.append("MCQ requires exactly four options labelled A, B, C, D.")
@@ -85,10 +124,7 @@ def validate_answers(question: Question, options: list[QuestionOption]) -> list[
 def validate_question_data(question: Question, rule: SchemeRule | None) -> list[str]:
     """Pure row validation shared by paper checks and import; no per-question queries."""
     errors = []
-    try:
-        question.clean_fields(exclude=["mock_test", "phase"])
-    except ValidationError as exc:
-        errors.extend(exc.messages)
+    errors.extend(_field_errors(question, Question, ("mock_test", "phase")))
     if rule is None:
         errors.append("Subject/question type is not allowed in this phase.")
     elif (question.positive_marks, question.negative_marks) != (
@@ -108,31 +144,46 @@ def validate_question_data(question: Question, rule: SchemeRule | None) -> list[
     return errors
 
 
-def validate_paper(mock: MockTest) -> ValidationResult:
+def validate_paper(mock: MockTest, *, persisted=False) -> ValidationResult:
     """Derive validity on demand, never trust a stored flag or a previous preview."""
     if not mock.exam_scheme_id:
         return ValidationResult(errors=["An exam scheme is required."])
-    result = validate_scheme(mock.exam_scheme)
+    expected_phases = list(mock.exam_scheme.phases.prefetch_related("rules").all())
+    result = validate_scheme(mock.exam_scheme, phases=expected_phases)
     try:
-        mock.full_clean()
+        # Starts load persisted rows: the database already enforces foreign keys,
+        # unique and CHECK constraints. Retain field/domain checks, without
+        # querying those same constraints again for every student.
+        mock.full_clean(
+            exclude=["exam_type", "exam_scheme", "rules_verified_by"] if persisted else None,
+            validate_unique=not persisted,
+            validate_constraints=not persisted,
+        )
     except ValidationError as exc:
         result.errors.extend(exc.messages)
     if mock.ends_at - mock.starts_at != timedelta(minutes=mock.exam_scheme.total_duration_minutes):
         result.errors.append("Mock duration must exactly match the scheme duration.")
     actual_phases = list(mock.phases.select_related("scheme_phase").all())
-    expected_phases = list(mock.exam_scheme.phases.prefetch_related("rules").all())
     if [p.scheme_phase_id for p in actual_phases] != [p.pk for p in expected_phases]:
         result.errors.append("Mock phases/order do not match the scheme.")
     for phase in actual_phases:
         try:
-            phase.full_clean()
+            phase.full_clean(
+                exclude=["mock_test", "scheme_phase"] if persisted else None,
+                validate_unique=not persisted,
+                validate_constraints=not persisted,
+            )
         except ValidationError as exc:
             result.errors.extend(exc.messages)
-    questions = list(
-        mock.questions.select_related("phase__scheme_phase", "mock_test")
-        .prefetch_related("options")
-        .all()
-    )
+    # Scalar rows avoid constructing 150 duplicate MockTests/MockPhases and 600
+    # option models per CET student. Relationships are checked from the phase map.
+    questions = list(mock.questions.values_list(*_row_fields(Question), named=True))
+    options_by_question = {}
+    for option in QuestionOption.objects.filter(question__mock_test=mock).values_list(
+        *_row_fields(QuestionOption), named=True
+    ):
+        options_by_question.setdefault(option.question_id, []).append(option)
+    phases_by_id = {phase.pk: phase for phase in actual_phases}
     expected_count = mock.exam_scheme.total_question_count
     if len(questions) != expected_count:
         result.errors.append(f"Expected {expected_count} questions; found {len(questions)}.")
@@ -142,16 +193,22 @@ def validate_paper(mock: MockTest) -> ValidationResult:
         (r.phase_id, r.subject, r.question_type): r for p in expected_phases for r in p.rules.all()
     }
     expected = {key: rule.question_count for key, rule in rules.items()}
-    actual = Counter((q.phase.scheme_phase_id, q.subject, q.question_type) for q in questions)
+
+    def rule_key(question):
+        phase = phases_by_id.get(question.phase_id)
+        return (phase.scheme_phase_id if phase else None, question.subject, question.question_type)
+
+    actual = Counter(rule_key(q) for q in questions)
     if dict(actual) != expected:
         result.errors.append("Subject/type/phase question counts do not match scheme rules.")
     for q in questions:
-        rule = rules.get((q.phase.scheme_phase_id, q.subject, q.question_type))
+        rule = rules.get(rule_key(q))
         result.errors.extend(f"Q{q.question_number}: {m}" for m in validate_question_data(q, rule))
-        if q.phase.mock_test_id != mock.pk:
+        if q.phase_id not in phases_by_id:
             result.errors.append(f"Q{q.question_number}: phase belongs to another mock.")
         result.errors.extend(
-            f"Q{q.question_number}: {m}" for m in validate_answers(q, list(q.options.all()))
+            f"Q{q.question_number}: {m}"
+            for m in validate_answers(q, options_by_question.get(q.id, []))
         )
     if sum((q.positive_marks for q in questions), Decimal(0)) != mock.exam_scheme.maximum_marks:
         result.errors.append("Paper maximum marks do not match the scheme.")

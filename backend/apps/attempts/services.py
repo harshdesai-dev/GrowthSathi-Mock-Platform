@@ -111,7 +111,7 @@ def response_data(response):
     }
 
 
-def state_data(attempt, now):
+def state_data(attempt, now, *, newly_created=False):
     mock = attempt.mock_test
     phase = current_phase(mock, now) if attempt.status == "IN_PROGRESS" else None
     phase_start = mock.starts_at + timedelta(minutes=phase.start_offset_minutes) if phase else None
@@ -142,11 +142,11 @@ def state_data(attempt, now):
             and phase.order == max(p.order for p in mock.phases.all())
             and mock.status == "LIVE"
         ),
-        "responses": [response_data(response) for response in visible],
-        "saved_response_count": responses.count(),
-        "answered_count": responses.exclude(
-            selected_option__isnull=True, numeric_answer=""
-        ).count(),
+        "responses": [] if newly_created else [response_data(response) for response in visible],
+        "saved_response_count": 0 if newly_created else responses.count(),
+        "answered_count": 0
+        if newly_created
+        else responses.exclude(selected_option__isnull=True, numeric_answer="").count(),
         "question_count": mock.exam_scheme.total_question_count,
     }
 
@@ -171,7 +171,9 @@ def attempt_state(student, attempt_id):
 @committed
 def start_attempt(student, mock_id):
     # Same student lock used by payment/refund services: entitlement checks cannot race them.
-    student = User.objects.select_for_update().get(pk=student.pk)
+    student = (
+        User.objects.select_related("profile").select_for_update(of=("self",)).get(pk=student.pk)
+    )
     try:
         mock = (
             MockTest.objects.select_related("exam_scheme")
@@ -205,7 +207,7 @@ def start_attempt(student, mock_id):
     if not existing:
         # Papers/schedules are immutable in SCHEDULED/LIVE. Validate each new start,
         # outside a shared mock-row lock so distinct students are not serialized.
-        if not mock.rules_verified_at or not validate_paper(mock).valid:
+        if not mock.rules_verified_at or not validate_paper(mock, persisted=True).valid:
             return ExamDenied("This mock is not valid for an exam.", "mock_invalid")
     if mock.status == "SCHEDULED":
         locked_mock = MockTest.objects.select_for_update().get(pk=mock.pk)
@@ -232,7 +234,9 @@ def start_attempt(student, mock_id):
         student=student, mock_test=mock, started_at=now, last_heartbeat_at=now
     )
     logger.info("attempt_started attempt=%s mock=%s", attempt.pk, mock.pk)
-    return state_data(attempt, now)
+    # The new UUID is not visible outside this uncommitted transaction: it cannot
+    # have responses yet. Resumes still read authoritative saved responses.
+    return state_data(attempt, now, newly_created=True)
 
 
 def writable(attempt, now):
