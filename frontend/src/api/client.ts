@@ -42,6 +42,7 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
+    signal: init.signal ?? AbortSignal.timeout(15000),
     credentials: "include",
     headers: {
       ...(init.body ? { "Content-Type": "application/json" } : {}),

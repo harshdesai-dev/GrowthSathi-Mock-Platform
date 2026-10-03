@@ -206,8 +206,8 @@ export function MockDetailPage() {
               ))}
           </div>
           <p>
-            Purchasing records access only. The exam interface is not available
-            in this phase.
+            Purchased this mock? Open your account to read the instructions and
+            join during its global exam window.
           </p>
         </>
       )}
@@ -429,7 +429,11 @@ export function PurchasedAccess() {
                   ? "Mock cancelled — contact support"
                   : grant.status}
             </strong>
-            <span>Exam interface coming in a later phase.</span>
+            {grant.has_access && (
+              <Link to={`/mocks/${grant.mock.id}/instructions`}>
+                Instructions / enter exam
+              </Link>
+            )}
           </article>
         ))
       )}

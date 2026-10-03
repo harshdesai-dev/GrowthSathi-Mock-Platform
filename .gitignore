@@ -21,6 +21,8 @@ htmlcov/
 node_modules/
 frontend/dist/
 frontend/coverage/
+frontend/test-results/
+frontend/playwright-report/
 *.tsbuildinfo
 frontend/vite.config.js
 frontend/vite.config.d.ts

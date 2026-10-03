@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.common",
     "apps.exams",
     "apps.commerce",
+    "apps.attempts",
 ]
 
 MIDDLEWARE = [
