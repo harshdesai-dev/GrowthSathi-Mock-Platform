@@ -20,6 +20,7 @@ import { OnboardingPage } from "../pages/OnboardingPage";
 import { OwnerLayout } from "../owner/OwnerLayout";
 import { OwnerMockDetailPage } from "../owner/OwnerMockDetailPage";
 import { OwnerMockFormPage } from "../owner/OwnerMockFormPage";
+import { OwnerMockQuestionsPage } from "../owner/OwnerMockQuestionsPage";
 import { OwnerMocksPage } from "../owner/OwnerMocksPage";
 import { OwnerOverviewPage } from "../owner/OwnerOverviewPage";
 import { OwnerOnlyRoute } from "../owner/OwnerOnlyRoute";
@@ -145,6 +146,10 @@ export function AppRoutes() {
         <Route path="mocks" element={<OwnerMocksPage />} />
         <Route path="mocks/new" element={<OwnerMockFormPage />} />
         <Route path="mocks/:mockId/edit" element={<OwnerMockFormPage />} />
+        <Route
+          path="mocks/:mockId/questions"
+          element={<OwnerMockQuestionsPage />}
+        />
         <Route path="mocks/:mockId" element={<OwnerMockDetailPage />} />
       </Route>
       <Route path="*" element={<NotFoundPage />} />

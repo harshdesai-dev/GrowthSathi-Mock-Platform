@@ -107,6 +107,12 @@ export function OwnerMockDetailPage() {
           <p className="owner-mock-detail__slug">{mock.slug}</p>
         </div>
         <div className="owner-mock-detail__actions">
+          <Link
+            className="secondary-button"
+            to={`/owner/mocks/${mock.id}/questions`}
+          >
+            Questions
+          </Link>
           {mock.status === "DRAFT" && (
             <Link
               className="primary-button owner-mock-edit"
@@ -142,10 +148,14 @@ export function OwnerMockDetailPage() {
               <dd>{mock.exam_scheme.active ? "Active" : "Inactive"}</dd>
             </div>
             <div>
-              <dt>Question count</dt>
+              <dt>Questions</dt>
               <dd>
-                {mock.question_count.toLocaleString("en-IN")} /{" "}
-                {mock.exam_scheme.total_question_count.toLocaleString("en-IN")}
+                <Link to={`/owner/mocks/${mock.id}/questions`}>
+                  {mock.question_count.toLocaleString("en-IN")} /{" "}
+                  {mock.exam_scheme.total_question_count.toLocaleString(
+                    "en-IN",
+                  )}
+                </Link>
               </dd>
             </div>
             <div>

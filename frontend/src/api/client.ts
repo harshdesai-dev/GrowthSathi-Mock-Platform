@@ -37,26 +37,42 @@ interface SessionResponse {
   user?: AuthUser;
 }
 
-export async function apiRequest<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+async function apiFetch(path: string, init: RequestInit): Promise<Response> {
+  const bodyIsFormData =
+    typeof FormData !== "undefined" && init.body instanceof FormData;
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     signal: init.signal ?? AbortSignal.timeout(15000),
     credentials: "include",
     headers: {
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
+      ...(init.body && !bodyIsFormData
+        ? { "Content-Type": "application/json" }
+        : {}),
       ...init.headers,
     },
   });
   if (!response.ok) {
     throw await parseApiError(response);
   }
+  return response;
+}
+
+export async function apiRequest<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const response = await apiFetch(path, init);
   if (response.status === 204) {
     return undefined as T;
   }
   return (await response.json()) as T;
+}
+
+export async function apiBlobRequest(
+  path: string,
+  init: RequestInit = {},
+): Promise<Blob> {
+  return (await apiFetch(path, init)).blob();
 }
 
 async function getCsrfToken(): Promise<string> {

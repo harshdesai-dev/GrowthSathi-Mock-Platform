@@ -1,4 +1,4 @@
-import { apiRequest } from "../api/client";
+import { apiBlobRequest, apiRequest } from "../api/client";
 import type { AuthContextValue } from "../auth/auth-context";
 
 export interface OwnerAccess {
@@ -73,6 +73,60 @@ export interface OwnerMockDetail extends OwnerMockSummary {
   instructions_md: string;
   phases: OwnerMockPhase[];
   operational_warnings: string[];
+}
+
+export interface OwnerQuestionGroup {
+  phase_order: number;
+  phase_name: string;
+  subject: string;
+  question_type: string;
+  count: number;
+}
+
+export interface OwnerQuestionSummary {
+  id: string;
+  question_number: number;
+  phase_order: number;
+  phase_name: string;
+  subject: string;
+  question_type: string;
+  status: string;
+  status_label: string;
+  question_preview: string;
+  has_image: boolean;
+}
+
+export interface OwnerQuestionDetail extends OwnerQuestionSummary {
+  question_text_md: string;
+  options: { label: string; text: string; has_image: boolean }[];
+}
+
+export interface OwnerQuestionsResponse {
+  mock: {
+    id: string;
+    title: string;
+    status: OwnerMockStatus;
+    question_count: number;
+    expected_question_count: number;
+    read_only: boolean;
+  };
+  grouped_counts: OwnerQuestionGroup[];
+  results: OwnerQuestionSummary[];
+}
+
+export interface OwnerQuestionImportPreview {
+  valid: boolean;
+  token: string;
+  rows: {
+    row: number;
+    question_number: string;
+    phase: string;
+    subject: string;
+    question_type: string;
+    question_preview: string;
+  }[];
+  errors: { row: number | null; message: string }[];
+  warnings: string[];
 }
 
 export interface OwnerMockTypeOption extends OwnerMockExamType {
@@ -202,6 +256,91 @@ export function updateOwnerMockApi(
       cache: "no-store",
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify(input),
+    }),
+  );
+}
+
+export function ownerQuestionsApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+  signal: AbortSignal,
+) {
+  return withAccess((token) =>
+    apiRequest<OwnerQuestionsResponse>(
+      `/owner/mocks/${encodeURIComponent(mockId)}/questions/`,
+      {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+        signal,
+      },
+    ),
+  );
+}
+
+export function ownerQuestionDetailApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+  questionId: string,
+  signal: AbortSignal,
+) {
+  return withAccess((token) =>
+    apiRequest<OwnerQuestionDetail>(
+      `/owner/mocks/${encodeURIComponent(mockId)}/questions/${encodeURIComponent(questionId)}/`,
+      {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+        signal,
+      },
+    ),
+  );
+}
+
+export function previewOwnerQuestionImportApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+  file: File,
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return withAccess((token) =>
+    apiRequest<OwnerQuestionImportPreview>(
+      `/owner/mocks/${encodeURIComponent(mockId)}/questions/import/preview/`,
+      {
+        method: "POST",
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      },
+    ),
+  );
+}
+
+export function commitOwnerQuestionImportApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+  token: string,
+) {
+  return withAccess((accessToken) =>
+    apiRequest<{ imported_count: number }>(
+      `/owner/mocks/${encodeURIComponent(mockId)}/questions/import/commit/`,
+      {
+        method: "POST",
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ token }),
+      },
+    ),
+  );
+}
+
+export function ownerQuestionTemplateApi(
+  withAccess: AuthContextValue["withAccess"],
+  fileFormat: "csv" | "xlsx",
+) {
+  return withAccess((token) =>
+    apiBlobRequest(`/owner/question-import/template/${fileFormat}/`, {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
     }),
   );
 }
