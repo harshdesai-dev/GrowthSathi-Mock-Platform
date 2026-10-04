@@ -6,7 +6,7 @@ from rest_framework import serializers
 from apps.accounts.models import StudentProfile, User
 from apps.accounts.phone import normalize_indian_mobile
 from apps.exams.models import ExamScheme, ExamType, MockTest
-from apps.exams.services import create_draft_mock, update_draft_mock
+from apps.exams.services import TRANSITIONS, create_draft_mock, update_draft_mock
 
 
 class GoogleAuthSerializer(serializers.Serializer):
@@ -128,6 +128,7 @@ class OwnerMockDetailSerializer(OwnerMockSummarySerializer):
     instructions_md = serializers.CharField(read_only=True)
     phases = OwnerMockPhaseSerializer(many=True, read_only=True)
     operational_warnings = serializers.SerializerMethodField()
+    allowed_transitions = serializers.SerializerMethodField()
 
     class Meta(OwnerMockSummarySerializer.Meta):
         fields = OwnerMockSummarySerializer.Meta.fields + (
@@ -138,6 +139,14 @@ class OwnerMockDetailSerializer(OwnerMockSummarySerializer):
             "instructions_md",
             "phases",
             "operational_warnings",
+            "allowed_transitions",
+        )
+
+    def get_allowed_transitions(self, obj: MockTest) -> list[str]:
+        return sorted(
+            target
+            for target in TRANSITIONS[obj.status]
+            if target != MockTest.Status.RESULTS_PUBLISHED
         )
 
     def get_operational_warnings(self, obj: MockTest) -> list[str]:

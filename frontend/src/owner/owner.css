@@ -1549,3 +1549,176 @@
     animation-duration: 2s;
   }
 }
+
+.owner-operation-page {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.owner-list-heading,
+.owner-lifecycle-actions,
+.owner-inline-filters,
+.owner-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.owner-list-heading h2,
+.owner-data-card h3 {
+  margin: 0;
+}
+
+.owner-list-heading p:last-child,
+.owner-data-card p {
+  color: var(--color-text-secondary);
+}
+
+.owner-data-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 0.9rem;
+}
+
+.owner-data-card {
+  display: grid;
+  align-content: start;
+  gap: 0.9rem;
+  padding: 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-bg-surface);
+}
+
+.owner-data-card--warning,
+.owner-warning {
+  border-color: rgb(255 190 117 / 35%);
+}
+
+.owner-data-card dl {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.owner-data-card dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.owner-data-card dt,
+.owner-pager,
+.owner-history-list span,
+.owner-history-list small {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.owner-data-card dd {
+  margin: 0;
+  text-align: right;
+}
+
+.owner-inline-filters input,
+.owner-inline-filters select,
+.owner-operation-panel input,
+.owner-operation-panel select,
+.owner-operation-panel textarea {
+  min-height: 2.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.owner-inline-filters input {
+  flex: 1 1 16rem;
+}
+
+.owner-operation-panel textarea {
+  width: 100%;
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.owner-correction-form,
+.owner-reconcile-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.owner-correction-form h3,
+.owner-correction-form p,
+.owner-correction-form textarea,
+.owner-reconcile-form h3,
+.owner-reconcile-form p {
+  grid-column: 1 / -1;
+}
+
+.owner-history-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.owner-history-list li {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.owner-warning {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgb(255 190 117 / 35%);
+  border-radius: var(--radius-control);
+  background: rgb(255 190 117 / 6%);
+  color: #ffd98b;
+}
+
+.danger-button {
+  min-height: 2.75rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid rgb(255 91 91 / 45%);
+  border-radius: var(--radius-control);
+  background: rgb(255 91 91 / 10%);
+  color: #ffb5b5;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.danger-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 48rem) {
+  .owner-correction-form,
+  .owner-reconcile-form {
+    grid-template-columns: 1fr;
+  }
+
+  .owner-correction-form h3,
+  .owner-correction-form p,
+  .owner-correction-form textarea,
+  .owner-reconcile-form h3,
+  .owner-reconcile-form p {
+    grid-column: auto;
+  }
+
+  .owner-inline-filters {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

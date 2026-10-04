@@ -5,6 +5,7 @@ import { price } from "../api/commerce";
 import { useAuth } from "../auth/auth-context";
 import {
   ownerMockDetailApi,
+  transitionOwnerMockApi,
   validateOwnerPaperApi,
   verifyOwnerRulesApi,
   type OwnerPaperValidationResult,
@@ -61,6 +62,8 @@ export function OwnerMockDetailPage() {
   const [confirmedMockId, setConfirmedMockId] = useState<string | null>(null);
   const [rulesOperation, setRulesOperation] =
     useState<RulesVerificationState | null>(null);
+  const [lifecycleError, setLifecycleError] = useState<string | null>(null);
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -164,6 +167,28 @@ export function OwnerMockDetailPage() {
     }
   }
 
+  async function transition(target: OwnerMockStatus) {
+    const message =
+      target === "CANCELLED"
+        ? "Cancel this mock? This action cannot be reversed. Any payment or refund implications still require the established manual/provider workflow."
+        : `Move this mock to ${statusLabels[target]}?`;
+    if (!window.confirm(message)) return;
+    setLifecycleBusy(true);
+    setLifecycleError(null);
+    try {
+      const updated = await transitionOwnerMockApi(withAccess, mock.id, target);
+      setState({ status: "success", mockId: mock.id, mock: updated });
+    } catch (error) {
+      setLifecycleError(
+        error instanceof Error
+          ? error.message
+          : "The lifecycle change was rejected.",
+      );
+    } finally {
+      setLifecycleBusy(false);
+    }
+  }
+
   return (
     <section className="owner-mock-detail">
       <Link className="owner-back-link" to="/owner/mocks">
@@ -197,6 +222,60 @@ export function OwnerMockDetailPage() {
           </span>
         </div>
       </header>
+
+      <section className="owner-operation-panel owner-lifecycle-panel">
+        <div className="owner-operation-panel__heading">
+          <div>
+            <p className="eyebrow">Controlled state change</p>
+            <h3>Lifecycle</h3>
+          </div>
+          {mock.status === "CLOSED" && (
+            <Link
+              className="primary-button"
+              to={`/owner/mocks/${mock.id}/results`}
+            >
+              Operate results
+            </Link>
+          )}
+        </div>
+        {(mock.allowed_transitions ?? []).length ? (
+          <div className="owner-lifecycle-actions">
+            {(mock.allowed_transitions ?? []).map((target) => (
+              <button
+                className={
+                  target === "CANCELLED" ? "danger-button" : "primary-button"
+                }
+                disabled={lifecycleBusy}
+                key={target}
+                onClick={() => void transition(target)}
+                type="button"
+              >
+                {
+                  {
+                    REGISTRATION_OPEN: "Open registration",
+                    SCHEDULED: "Schedule mock",
+                    LIVE: "Start mock",
+                    CLOSED: "Close mock",
+                    CANCELLED: "Cancel mock",
+                    DRAFT: "Move to draft",
+                    RESULTS_PUBLISHED: "Publish results",
+                  }[target]
+                }
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="owner-operation-panel__help">
+            No lifecycle transitions are available. Result publication is
+            handled only by the dedicated result workflow.
+          </p>
+        )}
+        {lifecycleError && (
+          <p className="owner-operation-error" role="alert">
+            {lifecycleError}
+          </p>
+        )}
+      </section>
 
       <section aria-label="Mock operations" className="owner-mock-facts">
         <article>

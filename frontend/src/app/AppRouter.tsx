@@ -24,6 +24,14 @@ import { OwnerMockQuestionsPage } from "../owner/OwnerMockQuestionsPage";
 import { OwnerMocksPage } from "../owner/OwnerMocksPage";
 import { OwnerOverviewPage } from "../owner/OwnerOverviewPage";
 import { OwnerOnlyRoute } from "../owner/OwnerOnlyRoute";
+import {
+  OwnerMockResultsPage,
+  OwnerPaymentDetailPage,
+  OwnerPaymentsPage,
+  OwnerResultsPage,
+  OwnerStudentDetailPage,
+  OwnerStudentsPage,
+} from "../owner/OwnerOperationsPages";
 const ExamInstructionsPage = lazy(() =>
   import("../pages/ExamPages").then((module) => ({
     default: module.ExamInstructionsPage,
@@ -151,6 +159,18 @@ export function AppRoutes() {
           element={<OwnerMockQuestionsPage />}
         />
         <Route path="mocks/:mockId" element={<OwnerMockDetailPage />} />
+        <Route
+          path="mocks/:mockId/results"
+          element={<OwnerMockResultsPage />}
+        />
+        <Route path="students" element={<OwnerStudentsPage />} />
+        <Route
+          path="students/:studentId"
+          element={<OwnerStudentDetailPage />}
+        />
+        <Route path="payments" element={<OwnerPaymentsPage />} />
+        <Route path="payments/:orderId" element={<OwnerPaymentDetailPage />} />
+        <Route path="results" element={<OwnerResultsPage />} />
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

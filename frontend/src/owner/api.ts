@@ -74,6 +74,128 @@ export interface OwnerMockDetail extends OwnerMockSummary {
   instructions_md: string;
   phases: OwnerMockPhase[];
   operational_warnings: string[];
+  allowed_transitions?: OwnerMockStatus[];
+}
+
+export interface OwnerResultRun {
+  id: string;
+  status:
+    | "VERIFIED"
+    | "CALCULATING"
+    | "COMPLETE"
+    | "PUBLISHED"
+    | "INVALIDATED"
+    | "WITHDRAWN"
+    | "FAILED";
+  started_at: string;
+  completed_at: string | null;
+  key_verified_at: string;
+  participant_count: number;
+  excluded_attempt_count: number;
+  notes: string;
+  errors: string;
+  published_at: string | null;
+}
+
+export interface OwnerResultMock {
+  id: string;
+  title: string;
+  status: OwnerMockStatus;
+  attempt_count: number;
+  result_release_at: string;
+  calculation_state: string;
+  verification_state: string;
+  publication_state: string;
+  latest_run: OwnerResultRun | null;
+  operational_warnings: string[];
+  runs: OwnerResultRun[];
+}
+
+export interface OwnerStudentSummary {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  class_level: string;
+  exam_target: string;
+  onboarding_completed: boolean;
+  joined_at: string;
+  purchased_mocks_count: number;
+  attempts_count: number;
+}
+
+export interface OwnerStudentDetail extends OwnerStudentSummary {
+  orders: Array<{
+    id: string;
+    offer: string;
+    amount_paise: number;
+    status: string;
+    created_at: string;
+    paid_at: string | null;
+  }>;
+  access: Array<{
+    id: string;
+    mock_id: string;
+    mock_title: string;
+    status: string;
+    granted_at: string;
+    revoked_at: string | null;
+  }>;
+  attempts: Array<{
+    id: string;
+    mock_id: string;
+    mock_title: string;
+    status: string;
+    started_at: string;
+    submitted_at: string | null;
+    result: {
+      score: string;
+      rank: number;
+      percentile: string;
+      published_at: string;
+    } | null;
+  }>;
+}
+
+export interface OwnerOrderSummary {
+  id: string;
+  student: { id: string; name: string; email: string };
+  offer: string;
+  amount_paise: number;
+  currency: string;
+  order_status: string;
+  payment_status: string | null;
+  created_at: string;
+  paid_at: string | null;
+  review_required: boolean;
+  review_note: string;
+  gateway_order_id: string | null;
+}
+
+export interface OwnerOrderDetail extends OwnerOrderSummary {
+  payments: Array<{
+    id: string;
+    gateway_payment_id: string;
+    amount_paise: number;
+    status: string;
+    created_at: string;
+  }>;
+  access_grants: Array<{
+    id: string;
+    mock_id: string;
+    mock_title: string;
+    status: string;
+    granted_at: string;
+    revoked_at: string | null;
+  }>;
+  reconciliation_state: string;
+}
+
+export interface OwnerPage<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
 }
 
 export interface OwnerPaperValidationResult {
@@ -394,5 +516,201 @@ export function ownerQuestionTemplateApi(
       cache: "no-store",
       headers: { Authorization: `Bearer ${token}` },
     }),
+  );
+}
+
+function ownerMutation<T>(
+  withAccess: AuthContextValue["withAccess"],
+  path: string,
+  body: unknown,
+) {
+  return withAccess((token) =>
+    apiRequest<T>(path, {
+      method: "POST",
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+export function transitionOwnerMockApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+  target: OwnerMockStatus,
+) {
+  return ownerMutation<OwnerMockDetail>(
+    withAccess,
+    `/owner/mocks/${encodeURIComponent(mockId)}/transition/`,
+    { target, confirmed: true },
+  );
+}
+
+export function ownerResultsApi(
+  withAccess: AuthContextValue["withAccess"],
+  signal: AbortSignal,
+) {
+  return withAccess((token) =>
+    apiRequest<{ results: OwnerResultMock[] }>("/owner/results/", {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
+      signal,
+    }),
+  );
+}
+
+export function ownerMockResultsApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+  signal: AbortSignal,
+) {
+  return withAccess((token) =>
+    apiRequest<OwnerResultMock>(
+      `/owner/mocks/${encodeURIComponent(mockId)}/results/`,
+      {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+        signal,
+      },
+    ),
+  );
+}
+
+export function reconcileOwnerResultsApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+) {
+  return ownerMutation<{ participant_count: number }>(
+    withAccess,
+    `/owner/mocks/${encodeURIComponent(mockId)}/results/reconcile/`,
+    { confirmed: true },
+  );
+}
+
+export function verifyOwnerResultsApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+  notes: string,
+) {
+  return ownerMutation<OwnerResultRun>(
+    withAccess,
+    `/owner/mocks/${encodeURIComponent(mockId)}/results/verify/`,
+    { notes, confirmed: true },
+  );
+}
+
+export function calculateOwnerResultsApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+  runId: string,
+) {
+  return ownerMutation<OwnerResultRun>(
+    withAccess,
+    `/owner/mocks/${encodeURIComponent(mockId)}/results/${encodeURIComponent(runId)}/calculate/`,
+    { confirmed: true },
+  );
+}
+
+export function publishOwnerResultsApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+  runId: string,
+) {
+  return ownerMutation<OwnerResultRun>(
+    withAccess,
+    `/owner/mocks/${encodeURIComponent(mockId)}/results/${encodeURIComponent(runId)}/publish/`,
+    { confirmed: true },
+  );
+}
+
+export function correctOwnerAnswerApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+  input: {
+    question_id: string;
+    reason: string;
+    correct_option?: string;
+    numeric_answer?: string;
+    numeric_tolerance?: string;
+  },
+) {
+  return ownerMutation<{ question_id: string; corrected: boolean }>(
+    withAccess,
+    `/owner/mocks/${encodeURIComponent(mockId)}/results/correct-answer/`,
+    { ...input, confirmed: true },
+  );
+}
+
+export function ownerStudentsApi(
+  withAccess: AuthContextValue["withAccess"],
+  search: string,
+  page: number,
+  signal: AbortSignal,
+) {
+  const params = new URLSearchParams({ page: String(page) });
+  if (search.trim()) params.set("search", search.trim());
+  return withAccess((token) =>
+    apiRequest<OwnerPage<OwnerStudentSummary>>(
+      `/owner/students/?${params.toString()}`,
+      { headers: { Authorization: `Bearer ${token}` }, signal },
+    ),
+  );
+}
+
+export function ownerStudentDetailApi(
+  withAccess: AuthContextValue["withAccess"],
+  studentId: string,
+  signal: AbortSignal,
+) {
+  return withAccess((token) =>
+    apiRequest<OwnerStudentDetail>(
+      `/owner/students/${encodeURIComponent(studentId)}/`,
+      { headers: { Authorization: `Bearer ${token}` }, signal },
+    ),
+  );
+}
+
+export function ownerPaymentsApi(
+  withAccess: AuthContextValue["withAccess"],
+  filters: { search: string; orderStatus: string; paymentStatus: string },
+  page: number,
+  signal: AbortSignal,
+) {
+  const params = new URLSearchParams({ page: String(page) });
+  if (filters.search.trim()) params.set("search", filters.search.trim());
+  if (filters.orderStatus) params.set("order_status", filters.orderStatus);
+  if (filters.paymentStatus)
+    params.set("payment_status", filters.paymentStatus);
+  return withAccess((token) =>
+    apiRequest<OwnerPage<OwnerOrderSummary>>(
+      `/owner/payments/?${params.toString()}`,
+      { headers: { Authorization: `Bearer ${token}` }, signal },
+    ),
+  );
+}
+
+export function ownerPaymentDetailApi(
+  withAccess: AuthContextValue["withAccess"],
+  orderId: string,
+  signal: AbortSignal,
+) {
+  return withAccess((token) =>
+    apiRequest<OwnerOrderDetail>(
+      `/owner/payments/${encodeURIComponent(orderId)}/`,
+      { headers: { Authorization: `Bearer ${token}` }, signal },
+    ),
+  );
+}
+
+export function reconcileOwnerPaymentApi(
+  withAccess: AuthContextValue["withAccess"],
+  orderId: string,
+  kind: "ORDER" | "PAYMENT",
+  reference: string,
+) {
+  return ownerMutation<OwnerOrderSummary>(
+    withAccess,
+    `/owner/payments/${encodeURIComponent(orderId)}/reconcile/`,
+    { kind, reference, confirmed: true },
   );
 }

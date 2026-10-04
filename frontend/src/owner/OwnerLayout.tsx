@@ -7,7 +7,11 @@ import growthSathiLogo from "../assets/brand/growthsathi-logo.webp";
 import { ownerAccessApi } from "./api";
 import "./owner.css";
 
-const navigation = ["Questions", "Students", "Payments", "Results"] as const;
+const navigation = [
+  { label: "Students", to: "/owner/students" },
+  { label: "Payments", to: "/owner/payments" },
+  { label: "Results", to: "/owner/results" },
+] as const;
 
 function OwnerNavigation({ label = "Owner navigation" }: { label?: string }) {
   return (
@@ -20,16 +24,11 @@ function OwnerNavigation({ label = "Owner navigation" }: { label?: string }) {
         <span>Mocks</span>
         <span aria-hidden="true" className="owner-navigation__marker" />
       </NavLink>
-      {navigation.map((label) => (
-        <span
-          aria-disabled="true"
-          className="owner-navigation__link owner-navigation__link--disabled"
-          key={label}
-          title="This section is not available yet"
-        >
-          <span>{label}</span>
-          <span className="owner-navigation__soon">Soon</span>
-        </span>
+      {navigation.map((item) => (
+        <NavLink className="owner-navigation__link" key={item.to} to={item.to}>
+          <span>{item.label}</span>
+          <span aria-hidden="true" className="owner-navigation__marker" />
+        </NavLink>
       ))}
     </nav>
   );
@@ -139,7 +138,13 @@ export function OwnerLayout() {
   const ownerName = user?.full_name || user?.first_name || "Owner";
   const sectionHeading = location.pathname.startsWith("/owner/mocks")
     ? "Mocks"
-    : "Overview";
+    : location.pathname.startsWith("/owner/students")
+      ? "Students"
+      : location.pathname.startsWith("/owner/payments")
+        ? "Payments"
+        : location.pathname.startsWith("/owner/results")
+          ? "Results"
+          : "Overview";
 
   return (
     <div className="owner-shell">

@@ -1,5 +1,20 @@
 from django.urls import path
 
+from .owner_dashboard import (
+    OwnerAnswerCorrectionView,
+    OwnerMockResultsView,
+    OwnerMockTransitionView,
+    OwnerPaymentDetailView,
+    OwnerPaymentReconcileView,
+    OwnerPaymentsView,
+    OwnerResultCalculateView,
+    OwnerResultPublishView,
+    OwnerResultReconcileView,
+    OwnerResultsView,
+    OwnerResultVerifyView,
+    OwnerStudentDetailView,
+    OwnerStudentsView,
+)
 from .owner_operations import OwnerMockPaperValidationView, OwnerMockRulesVerificationView
 from .owner_questions import (
     OwnerMockQuestionDetailView,
@@ -33,6 +48,59 @@ urlpatterns = [
     path("owner/mocks/", OwnerMocksView.as_view(), name="owner-mocks"),
     path("owner/mock-options/", OwnerMockOptionsView.as_view(), name="owner-mock-options"),
     path("owner/mocks/<uuid:mock_id>/", OwnerMockDetailView.as_view(), name="owner-mock-detail"),
+    path(
+        "owner/mocks/<uuid:mock_id>/transition/",
+        OwnerMockTransitionView.as_view(),
+        name="owner-mock-transition",
+    ),
+    path("owner/results/", OwnerResultsView.as_view(), name="owner-results"),
+    path(
+        "owner/mocks/<uuid:mock_id>/results/",
+        OwnerMockResultsView.as_view(),
+        name="owner-mock-results",
+    ),
+    path(
+        "owner/mocks/<uuid:mock_id>/results/reconcile/",
+        OwnerResultReconcileView.as_view(),
+        name="owner-result-reconcile",
+    ),
+    path(
+        "owner/mocks/<uuid:mock_id>/results/verify/",
+        OwnerResultVerifyView.as_view(),
+        name="owner-result-verify",
+    ),
+    path(
+        "owner/mocks/<uuid:mock_id>/results/<uuid:run_id>/calculate/",
+        OwnerResultCalculateView.as_view(),
+        name="owner-result-calculate",
+    ),
+    path(
+        "owner/mocks/<uuid:mock_id>/results/<uuid:run_id>/publish/",
+        OwnerResultPublishView.as_view(),
+        name="owner-result-publish",
+    ),
+    path(
+        "owner/mocks/<uuid:mock_id>/results/correct-answer/",
+        OwnerAnswerCorrectionView.as_view(),
+        name="owner-answer-correction",
+    ),
+    path("owner/students/", OwnerStudentsView.as_view(), name="owner-students"),
+    path(
+        "owner/students/<uuid:student_id>/",
+        OwnerStudentDetailView.as_view(),
+        name="owner-student-detail",
+    ),
+    path("owner/payments/", OwnerPaymentsView.as_view(), name="owner-payments"),
+    path(
+        "owner/payments/<uuid:order_id>/",
+        OwnerPaymentDetailView.as_view(),
+        name="owner-payment-detail",
+    ),
+    path(
+        "owner/payments/<uuid:order_id>/reconcile/",
+        OwnerPaymentReconcileView.as_view(),
+        name="owner-payment-reconcile",
+    ),
     path(
         "owner/mocks/<uuid:mock_id>/questions/",
         OwnerMockQuestionsView.as_view(),
