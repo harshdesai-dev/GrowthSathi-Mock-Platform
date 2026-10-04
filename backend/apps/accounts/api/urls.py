@@ -6,6 +6,7 @@ from .views import (
     LogoutView,
     MeView,
     OwnerAccessView,
+    OwnerOverviewView,
     ProfileView,
     RefreshView,
 )
@@ -17,5 +18,6 @@ urlpatterns = [
     path("auth/logout/", LogoutView.as_view(), name="auth-logout"),
     path("auth/me/", MeView.as_view(), name="auth-me"),
     path("owner/access/", OwnerAccessView.as_view(), name="owner-access"),
+    path("owner/overview/", OwnerOverviewView.as_view(), name="owner-overview"),
     path("profile/", ProfileView.as_view(), name="student-profile"),
 ]

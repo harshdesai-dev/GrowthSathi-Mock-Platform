@@ -47,6 +47,15 @@ class OwnerAccessSerializer(serializers.Serializer):
     is_owner = serializers.BooleanField()
 
 
+class OwnerOverviewSerializer(serializers.Serializer):
+    total_students = serializers.IntegerField(min_value=0)
+    upcoming_mocks = serializers.IntegerField(min_value=0)
+    completed_mocks = serializers.IntegerField(min_value=0)
+    paid_orders = serializers.IntegerField(min_value=0)
+    failed_payments = serializers.IntegerField(min_value=0)
+    total_revenue_paise = serializers.IntegerField(min_value=0)
+
+
 class CsrfTokenSerializer(serializers.Serializer):
     csrf_token = serializers.CharField()
 

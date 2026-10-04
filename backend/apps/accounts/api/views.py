@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.accounts.owner_metrics import get_owner_overview_metrics
 from apps.accounts.services import (
     GoogleTokenVerificationError,
     IdentityConflictError,
@@ -28,6 +29,7 @@ from .serializers import (
     GoogleAuthSerializer,
     MeSerializer,
     OwnerAccessSerializer,
+    OwnerOverviewSerializer,
     RefreshSessionSerializer,
     SessionSerializer,
     StudentProfileSerializer,
@@ -199,6 +201,16 @@ class OwnerAccessView(APIView):
     @extend_schema(responses={200: OwnerAccessSerializer})
     def get(self, request) -> Response:
         return Response({"is_owner": True})
+
+
+class OwnerOverviewView(APIView):
+    throttle_classes = [ReadThrottle]
+    permission_classes = [IsActiveOwner]
+
+    @extend_schema(responses={200: OwnerOverviewSerializer})
+    def get(self, request) -> Response:
+        metrics = get_owner_overview_metrics()
+        return Response(OwnerOverviewSerializer(instance=metrics).data)
 
 
 class ProfileView(APIView):
