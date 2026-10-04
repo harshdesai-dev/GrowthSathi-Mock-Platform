@@ -27,6 +27,7 @@ const incompleteUser: AuthUser = {
   full_name: "Asha Patil",
   onboarding_completed: false,
   is_staff: false,
+  is_superuser: false,
 };
 
 function contextValue(
@@ -51,6 +52,7 @@ function renderAuth(value: AuthContextValue) {
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/onboarding" element={<p>Onboarding destination</p>} />
           <Route path="/dashboard" element={<p>Dashboard destination</p>} />
+          <Route path="/owner" element={<p>Owner destination</p>} />
         </Routes>
       </MemoryRouter>
     </AuthContext.Provider>,
@@ -95,5 +97,20 @@ describe("Google login", () => {
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent("Identity conflict"),
     );
+  });
+
+  it("routes an owner to the owner area after sign-in", async () => {
+    const owner: AuthUser = {
+      ...incompleteUser,
+      is_staff: true,
+      is_superuser: true,
+    };
+    renderAuth(contextValue(vi.fn().mockResolvedValue(owner)));
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Continue with Google" }),
+    );
+
+    expect(await screen.findByText("Owner destination")).toBeInTheDocument();
   });
 });

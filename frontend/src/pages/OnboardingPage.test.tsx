@@ -13,6 +13,7 @@ const user: AuthUser = {
   full_name: "Asha Patil",
   onboarding_completed: false,
   is_staff: false,
+  is_superuser: false,
 };
 
 const profile: StudentProfile = {

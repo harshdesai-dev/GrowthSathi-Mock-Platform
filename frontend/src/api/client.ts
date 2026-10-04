@@ -11,6 +11,7 @@ export interface AuthUser {
   full_name: string;
   onboarding_completed: boolean;
   is_staff: boolean;
+  is_superuser: boolean;
 }
 
 export interface StudentProfile {

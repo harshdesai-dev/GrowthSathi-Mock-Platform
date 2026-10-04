@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import growthSathiLogo from "../assets/brand/growthsathi-logo.webp";
 import { useAuth } from "../auth/auth-context";
+import { authenticatedHomePath } from "../auth/routes";
 
 export function AuthPage() {
   const { loginWithGoogle } = useAuth();
@@ -23,9 +24,7 @@ export function AuthPage() {
     setError("");
     try {
       const user = await loginWithGoogle(response.credential);
-      navigate(user.onboarding_completed ? "/dashboard" : "/onboarding", {
-        replace: true,
-      });
+      navigate(authenticatedHomePath(user), { replace: true });
     } catch (caught) {
       setError(
         caught instanceof Error

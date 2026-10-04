@@ -8,8 +8,8 @@ export default defineConfig(({ command, mode }) => {
   const allowed = new Set(["VITE_API_BASE_URL", "VITE_GOOGLE_CLIENT_ID"]);
 
   const unexpected = Object.keys(env).filter(
-      (key) => !allowed.has(key) && !key.startsWith("VITE_VERCEL_"),
-    );
+    (key) => !allowed.has(key) && !key.startsWith("VITE_VERCEL_"),
+  );
 
   if (unexpected.length > 0) {
     throw new Error(

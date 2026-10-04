@@ -17,6 +17,9 @@ import {
 } from "../pages/CommercePages";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { OnboardingPage } from "../pages/OnboardingPage";
+import { OwnerLayout } from "../owner/OwnerLayout";
+import { OwnerOverviewPage } from "../owner/OwnerOverviewPage";
+import { OwnerOnlyRoute } from "../owner/OwnerOnlyRoute";
 const ExamInstructionsPage = lazy(() =>
   import("../pages/ExamPages").then((module) => ({
     default: module.ExamInstructionsPage,
@@ -127,6 +130,16 @@ export function AppRoutes() {
           </CompletedProfileRoute>
         }
       />
+      <Route
+        path="/owner"
+        element={
+          <OwnerOnlyRoute>
+            <OwnerLayout />
+          </OwnerOnlyRoute>
+        }
+      >
+        <Route index element={<OwnerOverviewPage />} />
+      </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

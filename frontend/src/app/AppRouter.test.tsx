@@ -17,6 +17,18 @@ const incompleteUser: AuthUser = {
   full_name: "Asha Patil",
   onboarding_completed: false,
   is_staff: false,
+  is_superuser: false,
+};
+
+const ownerUser: AuthUser = {
+  id: "owner-id",
+  email: "owner@example.com",
+  first_name: "GrowthSathi",
+  last_name: "Owner",
+  full_name: "GrowthSathi Owner",
+  onboarding_completed: false,
+  is_staff: true,
+  is_superuser: true,
 };
 
 const emptyProfile: StudentProfile = {
@@ -41,6 +53,10 @@ function authValue(
     withAccess: vi.fn().mockResolvedValue([]),
     ...overrides,
   };
+}
+
+function withOwnerAccess<T>(operation: (token: string) => Promise<T>) {
+  return operation("owner-token");
 }
 
 function renderRoute(path: string, value: AuthContextValue) {
@@ -86,6 +102,71 @@ describe("Phase 1 route protection", () => {
         name: "Build your student profile",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("blocks an unauthenticated visitor from the owner area", async () => {
+    renderRoute("/owner", authValue());
+
+    expect(
+      await screen.findByRole("heading", { name: "Prepare with purpose." }),
+    ).toBeInTheDocument();
+  });
+
+  it("redirects a normal student away from the owner area", async () => {
+    renderRoute(
+      "/owner",
+      authValue({ status: "authenticated", user: incompleteUser }),
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Build your student profile",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Owner overview" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the owner area after backend owner access is confirmed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(Response.json({ is_owner: true }))
+        .mockResolvedValueOnce(
+          Response.json({
+            total_students: 3,
+            upcoming_mocks: 2,
+            completed_mocks: 4,
+            paid_orders: 5,
+            failed_payments: 1,
+            total_revenue_paise: 2900,
+          }),
+        ),
+    );
+    renderRoute(
+      "/owner",
+      authValue({
+        status: "authenticated",
+        user: ownerUser,
+        withAccess: withOwnerAccess,
+      }),
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "Owner overview" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: "Owner navigation" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Total students")).toBeInTheDocument();
+    expect(screen.getByText("Upcoming mocks")).toBeInTheDocument();
+    expect(screen.getByText("Completed mocks")).toBeInTheDocument();
+    expect(screen.getByText("Paid orders")).toBeInTheDocument();
+    expect(screen.getByText("Revenue")).toBeInTheDocument();
+    expect(screen.getByText("Payment failures")).toBeInTheDocument();
+    expect(await screen.findByText("₹29")).toBeInTheDocument();
   });
 
   it("lets a returning student bypass onboarding", () => {
