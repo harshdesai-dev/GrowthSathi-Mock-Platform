@@ -1,5 +1,6 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 import pytest
 from django.db import connection
@@ -295,3 +296,218 @@ def test_owner_mock_detail_includes_phases_and_lightweight_warnings(owner):
     ]
     assert "PRIVATE QUESTION CONTENT" not in response.content.decode()
     assert len(queries) == 3
+
+
+def draft_mock_payload(scheme, **overrides):
+    payload = {
+        "exam_type": str(scheme.exam_type_id),
+        "exam_scheme": str(scheme.pk),
+        "title": "Owner API draft mock",
+        "slug": "owner-api-draft-mock",
+        "description": "An editable DRAFT mock.",
+        "starts_at": "2026-11-10T09:00:00",
+        "ends_at": "2026-11-10T10:00:00",
+        "result_release_at": "2026-11-10T12:00:00",
+        "price_paise": 2900,
+        "instructions_md": "Read the instructions carefully.",
+    }
+    payload.update(overrides)
+    return payload
+
+
+@pytest.mark.django_db
+def test_owner_can_create_draft_and_generate_admin_equivalent_phases(owner):
+    scheme = create_scheme("JEE_MAIN", "JEE Main")
+
+    response = client_for(owner).post(
+        reverse("owner-mocks"), draft_mock_payload(scheme), format="json"
+    )
+
+    assert response.status_code == 201
+    mock = MockTest.objects.get(pk=response.json()["id"])
+    assert mock.status == MockTest.Status.DRAFT
+    assert mock.title == "Owner API draft mock"
+    assert mock.price_paise == 2900
+    assert mock.starts_at == datetime(2026, 11, 10, 9, tzinfo=ZoneInfo("Asia/Kolkata"))
+    assert list(
+        mock.phases.values("order", "name", "start_offset_minutes", "duration_minutes")
+    ) == [
+        {
+            "order": phase.order,
+            "name": phase.name,
+            "start_offset_minutes": phase.start_offset_minutes,
+            "duration_minutes": phase.duration_minutes,
+        }
+        for phase in scheme.phases.all()
+    ]
+    assert response.json()["status"] == "DRAFT"
+
+
+@pytest.mark.django_db
+def test_mock_create_requires_owner_and_authentication(student, owner):
+    scheme = create_scheme("JEE_MAIN", "JEE Main")
+    url = reverse("owner-mocks")
+    payload = draft_mock_payload(scheme)
+
+    assert client_for().post(url, payload, format="json").status_code == 401
+    assert client_for(student).post(url, payload, format="json").status_code == 403
+    assert client_for(student).get(reverse("owner-mock-options")).status_code == 403
+    assert client_for(owner).get(reverse("owner-mock-options")).status_code == 200
+
+
+@pytest.mark.django_db
+def test_create_rejects_forged_status_and_unsupported_fields(owner):
+    scheme = create_scheme("JEE_MAIN", "JEE Main")
+    response = client_for(owner).post(
+        reverse("owner-mocks"), draft_mock_payload(scheme, status="SCHEDULED"), format="json"
+    )
+
+    assert response.status_code == 400
+    assert "status" in response.json()["error"]["details"]
+    assert not MockTest.objects.exists()
+
+
+@pytest.mark.django_db
+def test_create_rejects_scheme_mismatch_invalid_schedule_and_duplicate_slug(owner):
+    jee_scheme = create_scheme("JEE_MAIN", "JEE Main")
+    cet_scheme = create_scheme("MHT_CET_PCM", "MHT-CET PCM")
+    url = reverse("owner-mocks")
+    client = client_for(owner)
+
+    mismatch = client.post(
+        url,
+        draft_mock_payload(jee_scheme, exam_scheme=str(cet_scheme.pk)),
+        format="json",
+    )
+    invalid_dates = client.post(
+        url,
+        draft_mock_payload(
+            jee_scheme,
+            ends_at="2026-11-10T08:00:00",
+            result_release_at="2026-11-10T07:00:00",
+        ),
+        format="json",
+    )
+    create_mock(
+        jee_scheme,
+        slug="owner-api-draft-mock",
+        title="Existing mock",
+        starts_at=timezone.now() + timedelta(days=1),
+    )
+    duplicate_slug = client.post(url, draft_mock_payload(jee_scheme), format="json")
+    invalid_price = client.post(
+        url, draft_mock_payload(jee_scheme, slug="free-draft", price_paise=0), format="json"
+    )
+
+    assert mismatch.status_code == 400
+    assert "exam_scheme" in mismatch.json()["error"]["details"]
+    assert invalid_dates.status_code == 400
+    assert "ends_at" in invalid_dates.json()["error"]["details"]
+    assert duplicate_slug.status_code == 400
+    assert "slug" in duplicate_slug.json()["error"]["details"]
+    assert invalid_price.status_code == 400
+    assert "price_paise" in invalid_price.json()["error"]["details"]
+
+
+@pytest.mark.django_db
+def test_owner_can_edit_draft_and_change_scheme_with_consistent_phases(owner):
+    jee_scheme = create_scheme("JEE_MAIN", "JEE Main")
+    cet_scheme = create_scheme("MHT_CET_PCM", "MHT-CET PCM")
+    mock = create_mock(
+        jee_scheme,
+        slug="draft-to-edit",
+        title="Old title",
+        starts_at=timezone.now() + timedelta(days=1),
+    )
+
+    response = client_for(owner).patch(
+        reverse("owner-mock-detail", kwargs={"mock_id": mock.pk}),
+        {
+            "exam_type": str(cet_scheme.exam_type_id),
+            "exam_scheme": str(cet_scheme.pk),
+            "title": "Updated draft title",
+            "price_paise": 4500,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200
+    mock.refresh_from_db()
+    assert mock.status == MockTest.Status.DRAFT
+    assert mock.title == "Updated draft title"
+    assert mock.exam_scheme_id == cet_scheme.pk
+    assert mock.exam_type_id == cet_scheme.exam_type_id
+    phases = list(mock.phases.select_related("scheme_phase"))
+    assert len(phases) == 1
+    assert phases[0].scheme_phase_id == cet_scheme.phases.get().pk
+    assert phases[0].name == cet_scheme.phases.get().name
+
+    forged_status = client_for(owner).patch(
+        reverse("owner-mock-detail", kwargs={"mock_id": mock.pk}),
+        {"status": "SCHEDULED"},
+        format="json",
+    )
+    assert forged_status.status_code == 400
+    mock.refresh_from_db()
+    assert mock.status == MockTest.Status.DRAFT
+
+
+@pytest.mark.django_db
+def test_student_cannot_create_or_edit_and_non_draft_edit_is_rejected(student, owner):
+    scheme = create_scheme("JEE_MAIN", "JEE Main")
+    draft = create_mock(
+        scheme,
+        slug="student-edit-draft",
+        title="Draft",
+        starts_at=timezone.now() + timedelta(days=1),
+    )
+    active = create_mock(
+        scheme,
+        slug="owner-edit-active",
+        title="Active",
+        starts_at=timezone.now() + timedelta(days=2),
+        status=MockTest.Status.SCHEDULED,
+    )
+    url = reverse("owner-mocks")
+    detail_url = reverse("owner-mock-detail", kwargs={"mock_id": draft.pk})
+
+    assert (
+        client_for(student).post(url, draft_mock_payload(scheme), format="json").status_code == 403
+    )
+    assert (
+        client_for(student).patch(detail_url, {"title": "Hacked"}, format="json").status_code == 403
+    )
+    assert client_for().patch(detail_url, {"title": "Hacked"}, format="json").status_code == 401
+
+    active_url = reverse("owner-mock-detail", kwargs={"mock_id": active.pk})
+    response = client_for(owner).patch(active_url, {"title": "Must not change"}, format="json")
+
+    assert response.status_code == 400
+    assert "DRAFT" in str(response.json()["error"]["details"])
+    active.refresh_from_db()
+    assert active.title == "Active"
+
+
+@pytest.mark.django_db
+def test_changing_scheme_is_rejected_after_questions_exist(owner):
+    jee_scheme = create_scheme("JEE_MAIN", "JEE Main")
+    cet_scheme = create_scheme("MHT_CET_PCM", "MHT-CET PCM")
+    mock = create_mock(
+        jee_scheme,
+        slug="scheme-with-paper",
+        title="Scheme with paper",
+        starts_at=timezone.now() + timedelta(days=1),
+    )
+    add_private_question(mock)
+
+    response = client_for(owner).patch(
+        reverse("owner-mock-detail", kwargs={"mock_id": mock.pk}),
+        {"exam_type": str(cet_scheme.exam_type_id), "exam_scheme": str(cet_scheme.pk)},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    mock.refresh_from_db()
+    assert mock.exam_scheme_id == jee_scheme.pk
+    assert mock.questions.count() == 1
+    assert mock.phases.get().scheme_phase_id == jee_scheme.phases.get().pk

@@ -1,9 +1,12 @@
+from zoneinfo import ZoneInfo
+
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from apps.accounts.models import StudentProfile, User
 from apps.accounts.phone import normalize_indian_mobile
-from apps.exams.models import MockTest
+from apps.exams.models import ExamScheme, ExamType, MockTest
+from apps.exams.services import create_draft_mock, update_draft_mock
 
 
 class GoogleAuthSerializer(serializers.Serializer):
@@ -118,11 +121,22 @@ class OwnerMockSummarySerializer(serializers.ModelSerializer):
 
 
 class OwnerMockDetailSerializer(OwnerMockSummarySerializer):
+    exam_type_id = serializers.UUIDField(read_only=True)
+    exam_scheme_id = serializers.UUIDField(read_only=True)
+    description = serializers.CharField(read_only=True)
+    instructions_md = serializers.CharField(read_only=True)
     phases = OwnerMockPhaseSerializer(many=True, read_only=True)
     operational_warnings = serializers.SerializerMethodField()
 
     class Meta(OwnerMockSummarySerializer.Meta):
-        fields = OwnerMockSummarySerializer.Meta.fields + ("phases", "operational_warnings")
+        fields = OwnerMockSummarySerializer.Meta.fields + (
+            "exam_type_id",
+            "exam_scheme_id",
+            "description",
+            "instructions_md",
+            "phases",
+            "operational_warnings",
+        )
 
     def get_operational_warnings(self, obj: MockTest) -> list[str]:
         warnings = []
@@ -146,6 +160,113 @@ class OwnerMockDetailSerializer(OwnerMockSummarySerializer):
 
 class OwnerMockListResponseSerializer(serializers.Serializer):
     results = OwnerMockSummarySerializer(many=True)
+
+
+class OwnerMockOptionExamTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExamType
+        fields = ("id", "code", "name", "active")
+
+
+class OwnerMockOptionExamSchemeSerializer(serializers.ModelSerializer):
+    exam_type_id = serializers.UUIDField(read_only=True)
+
+    class Meta:
+        model = ExamScheme
+        fields = (
+            "id",
+            "exam_type_id",
+            "name",
+            "version",
+            "active",
+            "total_question_count",
+            "total_duration_minutes",
+            "maximum_marks",
+        )
+
+
+class OwnerMockOptionsSerializer(serializers.Serializer):
+    exam_types = OwnerMockOptionExamTypeSerializer(many=True)
+    exam_schemes = OwnerMockOptionExamSchemeSerializer(many=True)
+
+
+class OwnerMockWriteSerializer(serializers.ModelSerializer):
+    exam_type = serializers.PrimaryKeyRelatedField(queryset=ExamType.objects.all())
+    exam_scheme = serializers.PrimaryKeyRelatedField(queryset=ExamScheme.objects.all())
+    starts_at = serializers.DateTimeField(default_timezone=ZoneInfo("Asia/Kolkata"))
+    ends_at = serializers.DateTimeField(default_timezone=ZoneInfo("Asia/Kolkata"))
+    result_release_at = serializers.DateTimeField(default_timezone=ZoneInfo("Asia/Kolkata"))
+    price_paise = serializers.IntegerField()
+
+    class Meta:
+        model = MockTest
+        fields = (
+            "exam_type",
+            "exam_scheme",
+            "title",
+            "slug",
+            "description",
+            "starts_at",
+            "ends_at",
+            "result_release_at",
+            "price_paise",
+            "instructions_md",
+        )
+
+    def validate(self, attrs):
+        allowed_fields = set(self.fields)
+        unexpected = set(self.initial_data) - allowed_fields
+        if unexpected:
+            raise serializers.ValidationError(
+                {
+                    field: "This field cannot be set through the owner draft API."
+                    for field in sorted(unexpected)
+                }
+            )
+
+        exam_type = attrs.get("exam_type", getattr(self.instance, "exam_type", None))
+        exam_scheme = attrs.get("exam_scheme", getattr(self.instance, "exam_scheme", None))
+        starts_at = attrs.get("starts_at", getattr(self.instance, "starts_at", None))
+        ends_at = attrs.get("ends_at", getattr(self.instance, "ends_at", None))
+        release_at = attrs.get(
+            "result_release_at", getattr(self.instance, "result_release_at", None)
+        )
+        price_paise = attrs.get("price_paise", getattr(self.instance, "price_paise", None))
+        if exam_type and exam_scheme and starts_at and ends_at and release_at:
+            candidate = MockTest(
+                exam_type=exam_type,
+                exam_scheme=exam_scheme,
+                title=attrs.get("title", getattr(self.instance, "title", "")),
+                slug=attrs.get("slug", getattr(self.instance, "slug", "")),
+                starts_at=starts_at,
+                ends_at=ends_at,
+                result_release_at=release_at,
+                price_paise=price_paise,
+                status=MockTest.Status.DRAFT,
+            )
+            try:
+                candidate.clean()
+            except DjangoValidationError as exc:
+                self._raise_domain_validation(exc)
+        return attrs
+
+    @staticmethod
+    def _raise_domain_validation(exc: DjangoValidationError):
+        if hasattr(exc, "message_dict"):
+            raise serializers.ValidationError(exc.message_dict) from exc
+        raise serializers.ValidationError({"non_field_errors": exc.messages}) from exc
+
+    def create(self, validated_data):
+        try:
+            return create_draft_mock(**validated_data)
+        except DjangoValidationError as exc:
+            self._raise_domain_validation(exc)
+
+    def update(self, instance, validated_data):
+        try:
+            return update_draft_mock(instance.pk, **validated_data)
+        except DjangoValidationError as exc:
+            self._raise_domain_validation(exc)
 
 
 class CsrfTokenSerializer(serializers.Serializer):

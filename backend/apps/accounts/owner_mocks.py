@@ -52,7 +52,11 @@ def owner_mock_detail_queryset():
         .order_by("order")
     )
     scheme_phases = SchemePhase.objects.order_by("order")
-    return _mock_queryset().prefetch_related(
-        Prefetch("phases", queryset=phases),
-        Prefetch("exam_scheme__phases", queryset=scheme_phases),
+    return (
+        _mock_queryset()
+        .defer(None)
+        .prefetch_related(
+            Prefetch("phases", queryset=phases),
+            Prefetch("exam_scheme__phases", queryset=scheme_phases),
+        )
     )

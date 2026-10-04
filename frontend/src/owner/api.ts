@@ -67,8 +67,39 @@ export interface OwnerMockPhase {
 }
 
 export interface OwnerMockDetail extends OwnerMockSummary {
+  exam_type_id: string;
+  exam_scheme_id: string;
+  description: string;
+  instructions_md: string;
   phases: OwnerMockPhase[];
   operational_warnings: string[];
+}
+
+export interface OwnerMockTypeOption extends OwnerMockExamType {
+  id: string;
+}
+
+export interface OwnerMockSchemeOption extends OwnerMockExamScheme {
+  id: string;
+  exam_type_id: string;
+}
+
+export interface OwnerMockOptions {
+  exam_types: OwnerMockTypeOption[];
+  exam_schemes: OwnerMockSchemeOption[];
+}
+
+export interface OwnerMockInput {
+  exam_type: string;
+  exam_scheme: string;
+  title: string;
+  slug: string;
+  description: string;
+  starts_at: string;
+  ends_at: string;
+  result_release_at: string;
+  price_paise: number;
+  instructions_md: string;
 }
 
 export interface OwnerMockFilters {
@@ -129,6 +160,48 @@ export function ownerMockDetailApi(
       cache: "no-store",
       headers: { Authorization: `Bearer ${token}` },
       signal,
+    }),
+  );
+}
+
+export function ownerMockOptionsApi(
+  withAccess: AuthContextValue["withAccess"],
+  signal: AbortSignal,
+) {
+  return withAccess((token) =>
+    apiRequest<OwnerMockOptions>("/owner/mock-options/", {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
+      signal,
+    }),
+  );
+}
+
+export function createOwnerMockApi(
+  withAccess: AuthContextValue["withAccess"],
+  input: OwnerMockInput,
+) {
+  return withAccess((token) =>
+    apiRequest<OwnerMockDetail>("/owner/mocks/", {
+      method: "POST",
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+export function updateOwnerMockApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+  input: OwnerMockInput,
+) {
+  return withAccess((token) =>
+    apiRequest<OwnerMockDetail>(`/owner/mocks/${encodeURIComponent(mockId)}/`, {
+      method: "PATCH",
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(input),
     }),
   );
 }

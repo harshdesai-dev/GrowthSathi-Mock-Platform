@@ -15,7 +15,10 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.owner_metrics import get_owner_overview_metrics
-from apps.accounts.owner_mocks import owner_mock_detail_queryset, owner_mock_list_queryset
+from apps.accounts.owner_mocks import (
+    owner_mock_detail_queryset,
+    owner_mock_list_queryset,
+)
 from apps.accounts.services import (
     GoogleTokenVerificationError,
     IdentityConflictError,
@@ -25,6 +28,7 @@ from apps.accounts.services import (
 )
 from apps.accounts.sessions import revoke_session, rotate_session
 from apps.common.throttles import LoginThrottle, ReadThrottle, SessionThrottle
+from apps.exams.models import ExamScheme, ExamType, MockTest
 
 from .permissions import IsActiveOwner
 from .serializers import (
@@ -35,6 +39,8 @@ from .serializers import (
     OwnerMockDetailSerializer,
     OwnerMockFiltersSerializer,
     OwnerMockListResponseSerializer,
+    OwnerMockOptionsSerializer,
+    OwnerMockWriteSerializer,
     OwnerOverviewSerializer,
     RefreshSessionSerializer,
     SessionSerializer,
@@ -233,6 +239,31 @@ class OwnerMocksView(APIView):
         mocks = owner_mock_list_queryset(**filters.validated_data, now=timezone.now())
         return Response(OwnerMockListResponseSerializer(instance={"results": mocks}).data)
 
+    @extend_schema(request=OwnerMockWriteSerializer, responses={201: OwnerMockDetailSerializer})
+    def post(self, request) -> Response:
+        serializer = OwnerMockWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        mock = serializer.save()
+        detail = owner_mock_detail_queryset().get(pk=mock.pk)
+        return Response(
+            OwnerMockDetailSerializer(instance=detail).data, status=status.HTTP_201_CREATED
+        )
+
+
+class OwnerMockOptionsView(APIView):
+    throttle_classes = [ReadThrottle]
+    permission_classes = [IsActiveOwner]
+
+    @extend_schema(responses={200: OwnerMockOptionsSerializer})
+    def get(self, request) -> Response:
+        options = {
+            "exam_types": ExamType.objects.order_by("name", "pk"),
+            "exam_schemes": ExamScheme.objects.select_related("exam_type").order_by(
+                "exam_type__name", "-effective_from", "version"
+            ),
+        }
+        return Response(OwnerMockOptionsSerializer(instance=options).data)
+
 
 class OwnerMockDetailView(APIView):
     throttle_classes = [ReadThrottle]
@@ -242,6 +273,17 @@ class OwnerMockDetailView(APIView):
     def get(self, request, mock_id) -> Response:
         mock = get_object_or_404(owner_mock_detail_queryset(), pk=mock_id)
         return Response(OwnerMockDetailSerializer(instance=mock).data)
+
+    @extend_schema(request=OwnerMockWriteSerializer, responses={200: OwnerMockDetailSerializer})
+    def patch(self, request, mock_id) -> Response:
+        mock = get_object_or_404(
+            MockTest.objects.select_related("exam_type", "exam_scheme"), pk=mock_id
+        )
+        serializer = OwnerMockWriteSerializer(mock, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        updated = serializer.save()
+        detail = owner_mock_detail_queryset().get(pk=updated.pk)
+        return Response(OwnerMockDetailSerializer(instance=detail).data)
 
 
 class ProfileView(APIView):

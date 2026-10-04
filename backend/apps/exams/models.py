@@ -1,7 +1,8 @@
 """Exam authoring models. Mutations serialize on the owning scheme/mock row.
 
 Bulk writes are deliberately unavailable: they bypass validation and lifecycle guards.
-Services use a private context for transitions and audited corrections, never HTTP input.
+Services use private contexts for draft binding edits, transitions, and audited corrections,
+never HTTP input.
 """
 
 import uuid
@@ -14,6 +15,7 @@ from django.core.validators import MinValueValidator
 from django.db import models, transaction
 
 _service_write = ContextVar("exam_service_write", default=False)
+_draft_mock_edit = ContextVar("draft_mock_edit", default=False)
 
 
 class Subject(models.TextChoices):
@@ -257,7 +259,9 @@ class MockTest(Entity):
                 )
         else:
             old = MockTest.objects.select_for_update().get(pk=self.pk)
-            if old.exam_scheme_id != self.exam_scheme_id or old.exam_type_id != self.exam_type_id:
+            if (
+                old.exam_scheme_id != self.exam_scheme_id or old.exam_type_id != self.exam_type_id
+            ) and not _draft_mock_edit.get():
                 raise ValidationError("Mock scheme/exam bindings are immutable; create a new mock.")
             if old.status != self.Status.DRAFT and not _service_write.get():
                 raise ValidationError("Operational mocks are read-only; use lifecycle services.")
@@ -272,6 +276,8 @@ class MockTest(Entity):
     def clean(self):
         if self._state.adding and self.status != self.Status.DRAFT:
             raise ValidationError({"status": "New mocks must be DRAFT."})
+        if self.price_paise is not None and self.price_paise <= 0:
+            raise ValidationError({"price_paise": "Price must be greater than zero."})
         if (
             self.exam_scheme_id
             and self.exam_type_id

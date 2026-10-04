@@ -223,6 +223,12 @@ export function OwnerMocksPage() {
             verification.
           </p>
         </div>
+        <Link
+          className="primary-button owner-mock-create"
+          to="/owner/mocks/new"
+        >
+          Create mock
+        </Link>
       </header>
 
       <div aria-label="Mock filters" className="owner-mock-filters">

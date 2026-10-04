@@ -106,11 +106,21 @@ export function OwnerMockDetailPage() {
           <h2>{mock.title}</h2>
           <p className="owner-mock-detail__slug">{mock.slug}</p>
         </div>
-        <span
-          className={`owner-status-badge owner-status-badge--${statusClass}`}
-        >
-          {statusLabels[mock.status]}
-        </span>
+        <div className="owner-mock-detail__actions">
+          {mock.status === "DRAFT" && (
+            <Link
+              className="primary-button owner-mock-edit"
+              to={`/owner/mocks/${mock.id}/edit`}
+            >
+              Edit
+            </Link>
+          )}
+          <span
+            className={`owner-status-badge owner-status-badge--${statusClass}`}
+          >
+            {statusLabels[mock.status]}
+          </span>
+        </div>
       </header>
 
       <section aria-label="Mock operations" className="owner-mock-facts">

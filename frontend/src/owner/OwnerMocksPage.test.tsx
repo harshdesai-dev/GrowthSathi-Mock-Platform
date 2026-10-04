@@ -5,6 +5,7 @@ import type { AuthUser } from "../api/client";
 import { AuthContext, type AuthContextValue } from "../auth/auth-context";
 import type { OwnerMockDetail, OwnerMockSummary } from "./api";
 import { OwnerMockDetailPage } from "./OwnerMockDetailPage";
+import { OwnerMockFormPage } from "./OwnerMockFormPage";
 import { OwnerMocksPage } from "./OwnerMocksPage";
 
 const owner: AuthUser = {
@@ -43,6 +44,10 @@ const mock: OwnerMockSummary = {
 
 const detail: OwnerMockDetail = {
   ...mock,
+  exam_type_id: "exam-type-id",
+  exam_scheme_id: "exam-scheme-id",
+  description: "A student mock description.",
+  instructions_md: "Read the instructions.",
   phases: [
     {
       order: 1,
@@ -82,6 +87,11 @@ function renderPage(path = "/owner/mocks") {
             element={<OwnerMockDetailPage />}
             path="/owner/mocks/:mockId"
           />
+          <Route element={<OwnerMockFormPage />} path="/owner/mocks/new" />
+          <Route
+            element={<OwnerMockFormPage />}
+            path="/owner/mocks/:mockId/edit"
+          />
         </Routes>
       </MemoryRouter>
     </AuthContext.Provider>,
@@ -99,6 +109,10 @@ it("renders mock operational fields and a real status badge", async () => {
   expect(
     await screen.findByRole("heading", { name: "Mocks" }),
   ).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Create mock" })).toHaveAttribute(
+    "href",
+    "/owner/mocks/new",
+  );
   expect(screen.getAllByText("JEE Weekly Mock").length).toBeGreaterThan(0);
   expect(screen.getAllByText("Registration open").length).toBeGreaterThan(0);
   expect(screen.getAllByText("74 / 75").length).toBeGreaterThan(0);
@@ -222,5 +236,22 @@ it("opens the read-only detail page from View", async () => {
   ).toBeInTheDocument();
   expect(fetcher.mock.calls[1]?.[0]).toEqual(
     expect.stringMatching(new RegExp(`/owner/mocks/${mock.id}/$`)),
+  );
+  expect(screen.queryByRole("link", { name: "Edit" })).not.toBeInTheDocument();
+});
+
+it("shows Edit on a draft mock detail page", async () => {
+  const draftDetail: OwnerMockDetail = {
+    ...detail,
+    status: "DRAFT",
+    status_label: "DRAFT",
+  };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(draftDetail)));
+
+  renderPage(`/owner/mocks/${mock.id}`);
+
+  expect(await screen.findByRole("link", { name: "Edit" })).toHaveAttribute(
+    "href",
+    `/owner/mocks/${mock.id}/edit`,
   );
 });

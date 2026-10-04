@@ -14,6 +14,7 @@ from .models import (
     MockTest,
     Question,
     QuestionType,
+    _draft_mock_edit,
     _service_write,
 )
 from .validation import validate_answers, validate_paper, validate_scheme
@@ -37,6 +38,65 @@ def service_write():
         yield
     finally:
         _service_write.reset(token)
+
+
+@contextmanager
+def draft_mock_edit():
+    """Permit an owner-authoring service to change DRAFT exam bindings only."""
+    token = _draft_mock_edit.set(True)
+    try:
+        yield
+    finally:
+        _draft_mock_edit.reset(token)
+
+
+@transaction.atomic
+def create_draft_mock(**fields) -> MockTest:
+    """Create a validated DRAFT mock and generate its versioned scheme phases."""
+    mock = MockTest(status=MockTest.Status.DRAFT, **fields)
+    mock.save()
+    generate_phases(mock)
+    return mock
+
+
+@transaction.atomic
+def update_draft_mock(mock_id: UUID, **changes) -> MockTest:
+    """Edit an operationally untouched DRAFT and resync phases on scheme changes."""
+    mock = MockTest.objects.select_for_update().get(pk=mock_id)
+    if mock.status != MockTest.Status.DRAFT:
+        raise ValidationError("Only DRAFT mocks can be edited.")
+
+    exam_type = changes.get("exam_type", mock.exam_type)
+    exam_scheme = changes.get("exam_scheme", mock.exam_scheme)
+    bindings_changed = exam_type.pk != mock.exam_type_id or exam_scheme.pk != mock.exam_scheme_id
+    if exam_scheme.exam_type_id != exam_type.pk:
+        raise ValidationError({"exam_scheme": "Scheme must match the exam type."})
+
+    if bindings_changed and mock.questions.exists():
+        raise ValidationError(
+            {
+                "exam_scheme": (
+                    "The exam type or scheme cannot change after questions have been added. "
+                    "Create a new DRAFT mock to preserve the authored paper."
+                )
+            }
+        )
+
+    if bindings_changed:
+        # Question writes also lock the mock row, so the existence check and phase
+        # replacement are serialized with any concurrent authoring request.
+        mock.phases.all().delete()
+
+    for field, value in changes.items():
+        setattr(mock, field, value)
+
+    if bindings_changed:
+        with draft_mock_edit():
+            mock.save()
+        generate_phases(mock)
+    else:
+        mock.save()
+    return mock
 
 
 @transaction.atomic
