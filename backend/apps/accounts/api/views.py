@@ -22,10 +22,12 @@ from apps.accounts.services import (
 from apps.accounts.sessions import revoke_session, rotate_session
 from apps.common.throttles import LoginThrottle, ReadThrottle, SessionThrottle
 
+from .permissions import IsActiveOwner
 from .serializers import (
     CsrfTokenSerializer,
     GoogleAuthSerializer,
     MeSerializer,
+    OwnerAccessSerializer,
     RefreshSessionSerializer,
     SessionSerializer,
     StudentProfileSerializer,
@@ -188,6 +190,15 @@ class MeView(APIView):
     @extend_schema(responses={200: MeSerializer})
     def get(self, request) -> Response:
         return Response(MeSerializer(request.user).data)
+
+
+class OwnerAccessView(APIView):
+    throttle_classes = [ReadThrottle]
+    permission_classes = [IsActiveOwner]
+
+    @extend_schema(responses={200: OwnerAccessSerializer})
+    def get(self, request) -> Response:
+        return Response({"is_owner": True})
 
 
 class ProfileView(APIView):

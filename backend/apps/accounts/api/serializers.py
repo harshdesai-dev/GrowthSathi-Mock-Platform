@@ -23,6 +23,7 @@ class MeSerializer(serializers.ModelSerializer):
             "full_name",
             "onboarding_completed",
             "is_staff",
+            "is_superuser",
         )
 
     def get_full_name(self, obj: User) -> str:
@@ -40,6 +41,10 @@ class RefreshSessionSerializer(serializers.Serializer):
     access_token = serializers.CharField()
     token_type = serializers.CharField()
     expires_in = serializers.IntegerField()
+
+
+class OwnerAccessSerializer(serializers.Serializer):
+    is_owner = serializers.BooleanField()
 
 
 class CsrfTokenSerializer(serializers.Serializer):
