@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { price } from "../api/commerce";
 import { useAuth } from "../auth/auth-context";
 import {
   ownerMockDetailApi,
+  validateOwnerPaperApi,
+  verifyOwnerRulesApi,
+  type OwnerPaperValidationResult,
   type OwnerMockDetail,
   type OwnerMockStatus,
 } from "./api";
@@ -30,6 +33,16 @@ type DetailState =
   | { status: "success"; mockId: string; mock: OwnerMockDetail }
   | { status: "error"; mockId: string };
 
+type PaperValidationState =
+  | { status: "loading"; mockId: string }
+  | { status: "success"; mockId: string; result: OwnerPaperValidationResult }
+  | { status: "error"; mockId: string };
+
+type RulesVerificationState =
+  | { status: "saving"; mockId: string }
+  | { status: "error"; mockId: string; message: string }
+  | { status: "saved"; mockId: string };
+
 function dateTime(value: string) {
   return `${dateTimeFormatter.format(new Date(value))} IST`;
 }
@@ -39,6 +52,15 @@ export function OwnerMockDetailPage() {
   const { withAccess } = useAuth();
   const [retryKey, setRetryKey] = useState(0);
   const [state, setState] = useState<DetailState>({ status: "loading" });
+  const [paperValidation, setPaperValidation] =
+    useState<PaperValidationState | null>(null);
+  const [rulesDraft, setRulesDraft] = useState<{
+    mockId: string;
+    notes: string;
+  } | null>(null);
+  const [confirmedMockId, setConfirmedMockId] = useState<string | null>(null);
+  const [rulesOperation, setRulesOperation] =
+    useState<RulesVerificationState | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -94,6 +116,53 @@ export function OwnerMockDetailPage() {
 
   const { mock } = state;
   const statusClass = mock.status.toLowerCase().replaceAll("_", "-");
+  const validation =
+    paperValidation?.mockId === mock.id ? paperValidation : null;
+  const rulesNotes =
+    rulesDraft?.mockId === mock.id ? rulesDraft.notes : mock.rules_source_notes;
+  const rulesConfirmed = confirmedMockId === mock.id;
+  const currentRulesOperation =
+    rulesOperation?.mockId === mock.id ? rulesOperation : null;
+
+  async function runPaperValidation() {
+    setPaperValidation({ status: "loading", mockId: mock.id });
+    try {
+      const result = await validateOwnerPaperApi(withAccess, mock.id);
+      setPaperValidation({ status: "success", mockId: mock.id, result });
+    } catch {
+      setPaperValidation({ status: "error", mockId: mock.id });
+    }
+  }
+
+  async function recordRulesVerification(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setRulesOperation({ status: "saving", mockId: mock.id });
+    try {
+      const verified = await verifyOwnerRulesApi(
+        withAccess,
+        mock.id,
+        rulesNotes,
+        rulesConfirmed,
+      );
+      setState((current) =>
+        current.status === "success" && current.mockId === mock.id
+          ? { ...current, mock: { ...current.mock, ...verified } }
+          : current,
+      );
+      setRulesDraft({ mockId: mock.id, notes: verified.rules_source_notes });
+      setConfirmedMockId(null);
+      setRulesOperation({ status: "saved", mockId: mock.id });
+    } catch (error) {
+      setRulesOperation({
+        status: "error",
+        mockId: mock.id,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Verification could not be recorded. Please try again.",
+      });
+    }
+  }
 
   return (
     <section className="owner-mock-detail">
@@ -192,6 +261,210 @@ export function OwnerMockDetailPage() {
         </article>
       </section>
 
+      <section aria-label="Mock checks" className="owner-operations-grid">
+        <article
+          aria-labelledby="owner-paper-validation-heading"
+          className="owner-operation-panel"
+        >
+          <div className="owner-operation-panel__heading">
+            <div>
+              <p className="eyebrow">On-demand check</p>
+              <h3 id="owner-paper-validation-heading">Paper validation</h3>
+            </div>
+            <button
+              className="primary-button"
+              disabled={validation?.status === "loading"}
+              onClick={() => void runPaperValidation()}
+              type="button"
+            >
+              {validation?.status === "loading"
+                ? "Validating..."
+                : validation?.status === "success"
+                  ? "Validate again"
+                  : "Validate paper"}
+            </button>
+          </div>
+          <p className="owner-operation-panel__help">
+            Runs the existing paper checks now. This result is shown for this
+            page view only and is not saved.
+          </p>
+          {validation?.status === "loading" && (
+            <p aria-live="polite" role="status">
+              Validating the current paper...
+            </p>
+          )}
+          {validation?.status === "error" && (
+            <div className="owner-operation-error" role="alert">
+              <p>Paper validation could not be completed.</p>
+              <button
+                className="secondary-button"
+                onClick={() => void runPaperValidation()}
+                type="button"
+              >
+                Retry validation
+              </button>
+            </div>
+          )}
+          {validation?.status === "success" && (
+            <div
+              aria-label="Paper validation result"
+              className={
+                "owner-paper-result " +
+                (validation.result.valid
+                  ? "owner-paper-result--valid"
+                  : "owner-paper-result--invalid")
+              }
+              role="status"
+            >
+              <h4>{validation.result.valid ? "Valid" : "Invalid"}</h4>
+              <dl className="owner-paper-result__summary">
+                <div>
+                  <dt>Questions</dt>
+                  <dd>
+                    {validation.result.actual_question_count} /{" "}
+                    {validation.result.expected_question_count}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Positive marks</dt>
+                  <dd>
+                    {validation.result.marks_summary.actual} /{" "}
+                    {validation.result.marks_summary.expected}
+                  </dd>
+                </div>
+              </dl>
+              <div className="owner-paper-result__messages">
+                <h5>Validation errors</h5>
+                {validation.result.errors.length > 0 ? (
+                  <ul>
+                    {validation.result.errors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No validation errors were returned.</p>
+                )}
+                <h5>Warnings</h5>
+                {validation.result.warnings.length > 0 ? (
+                  <ul>
+                    {validation.result.warnings.map((warning, index) => (
+                      <li key={index}>{warning}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>
+                    The existing validator does not return separate warnings.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </article>
+
+        <article
+          aria-labelledby="owner-rules-verification-heading"
+          className="owner-operation-panel"
+        >
+          <div className="owner-operation-panel__heading">
+            <div>
+              <p className="eyebrow">Official source review</p>
+              <h3 id="owner-rules-verification-heading">Official rules</h3>
+            </div>
+            <span
+              className={
+                "owner-rules-badge " +
+                (mock.rules_verified_at
+                  ? "owner-rules-badge--verified"
+                  : "owner-rules-badge--unverified")
+              }
+            >
+              {mock.rules_verified_at ? "Verified" : "Not verified"}
+            </span>
+          </div>
+          {mock.rules_verified_at && (
+            <div className="owner-rules-verification-metadata">
+              <p>Verified {dateTime(mock.rules_verified_at)}</p>
+              {mock.rules_source_notes && (
+                <p className="owner-rules-source-notes">
+                  {mock.rules_source_notes}
+                </p>
+              )}
+            </div>
+          )}
+          {mock.status === "DRAFT" ? (
+            <form
+              className="owner-rules-verification-form"
+              onSubmit={(event) => void recordRulesVerification(event)}
+            >
+              <p className="owner-operation-panel__help">
+                Record the official source, edition or version, checked date,
+                and checks performed. The verification time is set by the
+                server.
+              </p>
+              {mock.rules_verified_at && (
+                <p className="owner-rules-reverification-note">
+                  Recording again replaces the current notes and verification
+                  timestamp.
+                </p>
+              )}
+              <label htmlFor="owner-rules-source-notes">
+                Source and verification notes
+              </label>
+              <textarea
+                id="owner-rules-source-notes"
+                onChange={(event) => {
+                  setRulesDraft({ mockId: mock.id, notes: event.target.value });
+                  setConfirmedMockId(null);
+                  setRulesOperation(null);
+                }}
+                placeholder="Official source, edition/version, checked date, and checks performed"
+                required
+                rows={5}
+                value={rulesNotes}
+              />
+              <label className="owner-rules-confirm">
+                <input
+                  checked={rulesConfirmed}
+                  onChange={(event) =>
+                    setConfirmedMockId(event.target.checked ? mock.id : null)
+                  }
+                  type="checkbox"
+                />
+                I reviewed the official source and confirm recording this
+                verification.
+              </label>
+              <button
+                className="primary-button"
+                disabled={
+                  !rulesNotes.trim() ||
+                  !rulesConfirmed ||
+                  currentRulesOperation?.status === "saving"
+                }
+                type="submit"
+              >
+                {currentRulesOperation?.status === "saving"
+                  ? "Recording..."
+                  : "Record verification"}
+              </button>
+              {currentRulesOperation?.status === "error" && (
+                <p className="owner-operation-error" role="alert">
+                  {currentRulesOperation.message}
+                </p>
+              )}
+              {currentRulesOperation?.status === "saved" && (
+                <p className="owner-operation-success" role="status">
+                  Official-rules verification recorded.
+                </p>
+              )}
+            </form>
+          ) : (
+            <p className="owner-operation-panel__help">
+              Official rules can be verified only while this mock is in DRAFT.
+            </p>
+          )}
+        </article>
+      </section>
+
       <section
         aria-labelledby="owner-mock-phases-heading"
         className="owner-mock-phases"
@@ -247,8 +520,8 @@ export function OwnerMockDetailPage() {
       )}
 
       <p className="owner-mock-validation-note">
-        Full paper validation is not run on this page. Use the on-demand mock
-        validation operation in Django Admin when a full paper check is needed.
+        Paper validation uses the existing domain checks. Its result is not
+        saved to the mock.
       </p>
     </section>
   );

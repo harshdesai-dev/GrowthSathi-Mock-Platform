@@ -70,6 +70,7 @@ const summary: OwnerMockSummary = {
 
 const detail: OwnerMockDetail = {
   ...summary,
+  rules_source_notes: "",
   exam_type_id: examTypeId,
   exam_scheme_id: schemeId,
   description: "Initial description",

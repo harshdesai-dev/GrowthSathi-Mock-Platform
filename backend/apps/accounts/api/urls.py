@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .owner_operations import OwnerMockPaperValidationView, OwnerMockRulesVerificationView
 from .owner_questions import (
     OwnerMockQuestionDetailView,
     OwnerMockQuestionImportCommitView,
@@ -36,6 +37,16 @@ urlpatterns = [
         "owner/mocks/<uuid:mock_id>/questions/",
         OwnerMockQuestionsView.as_view(),
         name="owner-mock-questions",
+    ),
+    path(
+        "owner/mocks/<uuid:mock_id>/validate/",
+        OwnerMockPaperValidationView.as_view(),
+        name="owner-mock-validate",
+    ),
+    path(
+        "owner/mocks/<uuid:mock_id>/verify-rules/",
+        OwnerMockRulesVerificationView.as_view(),
+        name="owner-mock-verify-rules",
     ),
     path(
         "owner/mocks/<uuid:mock_id>/questions/<uuid:question_id>/",

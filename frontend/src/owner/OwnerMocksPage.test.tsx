@@ -3,7 +3,11 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import type { AuthUser } from "../api/client";
 import { AuthContext, type AuthContextValue } from "../auth/auth-context";
-import type { OwnerMockDetail, OwnerMockSummary } from "./api";
+import type {
+  OwnerMockDetail,
+  OwnerMockSummary,
+  OwnerPaperValidationResult,
+} from "./api";
 import { OwnerMockDetailPage } from "./OwnerMockDetailPage";
 import { OwnerMockFormPage } from "./OwnerMockFormPage";
 import { OwnerMocksPage } from "./OwnerMocksPage";
@@ -44,6 +48,7 @@ const mock: OwnerMockSummary = {
 
 const detail: OwnerMockDetail = {
   ...mock,
+  rules_source_notes: "",
   exam_type_id: "exam-type-id",
   exam_scheme_id: "exam-scheme-id",
   description: "A student mock description.",
@@ -113,7 +118,7 @@ it("renders mock operational fields and a real status badge", async () => {
     "href",
     "/owner/mocks/new",
   );
-  expect(screen.getAllByText("JEE Weekly Mock").length).toBeGreaterThan(0);
+  expect(await screen.findAllByText("JEE Weekly Mock")).not.toHaveLength(0);
   expect(screen.getAllByText("Registration open").length).toBeGreaterThan(0);
   expect(screen.getAllByText("74 / 75").length).toBeGreaterThan(0);
   expect(screen.getAllByText("Not verified").length).toBeGreaterThan(0);
@@ -232,7 +237,9 @@ it("opens the read-only detail page from View", async () => {
   ).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Phases" })).toBeInTheDocument();
   expect(
-    screen.getByText(/Full paper validation is not run on this page/),
+    screen.getByText(
+      /This result is shown for this page view only and is not saved/,
+    ),
   ).toBeInTheDocument();
   expect(fetcher.mock.calls[1]?.[0]).toEqual(
     expect.stringMatching(new RegExp(`/owner/mocks/${mock.id}/$`)),
@@ -254,4 +261,166 @@ it("shows Edit on a draft mock detail page", async () => {
     "href",
     `/owner/mocks/${mock.id}/edit`,
   );
+});
+
+const draftDetail: OwnerMockDetail = {
+  ...detail,
+  status: "DRAFT",
+  status_label: "DRAFT",
+};
+
+const validPaperResult: OwnerPaperValidationResult = {
+  valid: true,
+  status: "VALID",
+  errors: [],
+  warnings: [],
+  actual_question_count: 75,
+  expected_question_count: 75,
+  marks_summary: { actual: "300.00", expected: "300.00" },
+};
+
+it("runs paper validation and renders the valid result and summaries", async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(draftDetail))
+    .mockResolvedValueOnce(Response.json(validPaperResult));
+  vi.stubGlobal("fetch", fetcher);
+
+  renderPage("/owner/mocks/" + mock.id);
+
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Validate paper" }),
+  );
+
+  const result = await screen.findByRole("status", {
+    name: "Paper validation result",
+  });
+  expect(result).toHaveTextContent("Valid");
+  expect(result).toHaveTextContent("75 / 75");
+  expect(result).toHaveTextContent("300.00 / 300.00");
+  expect(result).toHaveTextContent(
+    "The existing validator does not return separate warnings.",
+  );
+  expect(fetcher.mock.calls[1]?.[1]).toMatchObject({ method: "POST" });
+  expect(screen.getByText(/not saved to the mock/i)).toBeInTheDocument();
+});
+
+it("renders existing validator errors for an invalid paper", async () => {
+  const invalidResult: OwnerPaperValidationResult = {
+    ...validPaperResult,
+    valid: false,
+    status: "INVALID",
+    actual_question_count: 0,
+    marks_summary: { actual: "0.00", expected: "300.00" },
+    errors: [
+      "Expected 75 questions; found 0.",
+      "Subject/type/phase question counts do not match scheme rules.",
+    ],
+  };
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(draftDetail))
+    .mockResolvedValueOnce(Response.json(invalidResult));
+  vi.stubGlobal("fetch", fetcher);
+
+  renderPage("/owner/mocks/" + mock.id);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Validate paper" }),
+  );
+
+  const result = await screen.findByRole("status", {
+    name: "Paper validation result",
+  });
+  expect(result).toHaveTextContent("Invalid");
+  expect(result).toHaveTextContent("Expected 75 questions; found 0.");
+});
+
+it("shows validation error and retry states", async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(draftDetail))
+    .mockResolvedValueOnce(
+      Response.json(
+        { error: { code: "unavailable", message: "Validator unavailable." } },
+        { status: 503 },
+      ),
+    )
+    .mockResolvedValueOnce(Response.json(validPaperResult));
+  vi.stubGlobal("fetch", fetcher);
+
+  renderPage("/owner/mocks/" + mock.id);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Validate paper" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Paper validation could not be completed.",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Retry validation" }));
+  expect(
+    await screen.findByRole("status", { name: "Paper validation result" }),
+  ).toHaveTextContent("Valid");
+});
+
+it("requires explicit confirmation before recording official-rule verification", async () => {
+  const verification = {
+    rules_verified_at: "2026-10-04T10:30:00Z",
+    rules_source_notes:
+      "NTA JEE Main bulletin, 2026 edition; checked 2026-09-25; verified pattern.",
+  };
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(draftDetail))
+    .mockResolvedValueOnce(Response.json(verification));
+  vi.stubGlobal("fetch", fetcher);
+
+  renderPage("/owner/mocks/" + mock.id);
+
+  expect((await screen.findAllByText("Not verified")).length).toBeGreaterThan(
+    0,
+  );
+  fireEvent.change(screen.getByLabelText("Source and verification notes"), {
+    target: { value: verification.rules_source_notes },
+  });
+  const submit = screen.getByRole("button", { name: "Record verification" });
+  expect(submit).toBeDisabled();
+
+  fireEvent.click(
+    screen.getByLabelText(
+      "I reviewed the official source and confirm recording this verification.",
+    ),
+  );
+  expect(submit).toBeEnabled();
+  fireEvent.click(submit);
+
+  expect(
+    await screen.findByText("Official-rules verification recorded."),
+  ).toBeInTheDocument();
+  expect(await screen.findAllByText(/Verified 4 Oct 2026/)).not.toHaveLength(0);
+  expect(screen.getAllByText(verification.rules_source_notes)).not.toHaveLength(
+    0,
+  );
+  expect(JSON.parse(String(fetcher.mock.calls[1]?.[1]?.body))).toEqual({
+    source_notes: verification.rules_source_notes,
+    confirmed: true,
+  });
+});
+
+it("shows saved official source metadata for an already verified mock", async () => {
+  const verifiedDetail: OwnerMockDetail = {
+    ...draftDetail,
+    rules_verified_at: "2026-10-04T10:30:00Z",
+    rules_source_notes: "Official JEE Main bulletin, 2026 edition.",
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(Response.json(verifiedDetail)),
+  );
+
+  renderPage("/owner/mocks/" + mock.id);
+
+  expect(await screen.findByText("Verified")).toBeInTheDocument();
+  expect(screen.getAllByText(/Verified 4 Oct 2026/).length).toBeGreaterThan(0);
+  expect(
+    screen.getAllByText("Official JEE Main bulletin, 2026 edition.").length,
+  ).toBeGreaterThan(0);
 });

@@ -69,10 +69,26 @@ export interface OwnerMockPhase {
 export interface OwnerMockDetail extends OwnerMockSummary {
   exam_type_id: string;
   exam_scheme_id: string;
+  rules_source_notes: string;
   description: string;
   instructions_md: string;
   phases: OwnerMockPhase[];
   operational_warnings: string[];
+}
+
+export interface OwnerPaperValidationResult {
+  valid: boolean;
+  status: "VALID" | "INVALID";
+  errors: string[];
+  warnings: string[];
+  actual_question_count: number;
+  expected_question_count: number;
+  marks_summary: { actual: string; expected: string };
+}
+
+export interface OwnerRulesVerificationResult {
+  rules_verified_at: string;
+  rules_source_notes: string;
 }
 
 export interface OwnerQuestionGroup {
@@ -257,6 +273,42 @@ export function updateOwnerMockApi(
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify(input),
     }),
+  );
+}
+
+export function validateOwnerPaperApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+) {
+  return withAccess((token) =>
+    apiRequest<OwnerPaperValidationResult>(
+      `/owner/mocks/${encodeURIComponent(mockId)}/validate/`,
+      {
+        method: "POST",
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      },
+    ),
+  );
+}
+
+export function verifyOwnerRulesApi(
+  withAccess: AuthContextValue["withAccess"],
+  mockId: string,
+  sourceNotes: string,
+  confirmed: boolean,
+) {
+  return withAccess((token) =>
+    apiRequest<OwnerRulesVerificationResult>(
+      `/owner/mocks/${encodeURIComponent(mockId)}/verify-rules/`,
+      {
+        method: "POST",
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ source_notes: sourceNotes, confirmed }),
+      },
+    ),
   );
 }
 

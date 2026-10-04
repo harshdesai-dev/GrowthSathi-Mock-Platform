@@ -123,6 +123,7 @@ class OwnerMockSummarySerializer(serializers.ModelSerializer):
 class OwnerMockDetailSerializer(OwnerMockSummarySerializer):
     exam_type_id = serializers.UUIDField(read_only=True)
     exam_scheme_id = serializers.UUIDField(read_only=True)
+    rules_source_notes = serializers.CharField(read_only=True)
     description = serializers.CharField(read_only=True)
     instructions_md = serializers.CharField(read_only=True)
     phases = OwnerMockPhaseSerializer(many=True, read_only=True)
@@ -132,6 +133,7 @@ class OwnerMockDetailSerializer(OwnerMockSummarySerializer):
         fields = OwnerMockSummarySerializer.Meta.fields + (
             "exam_type_id",
             "exam_scheme_id",
+            "rules_source_notes",
             "description",
             "instructions_md",
             "phases",
