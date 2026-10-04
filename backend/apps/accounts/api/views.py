@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.middleware.csrf import get_token
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema
@@ -13,6 +15,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.owner_metrics import get_owner_overview_metrics
+from apps.accounts.owner_mocks import owner_mock_detail_queryset, owner_mock_list_queryset
 from apps.accounts.services import (
     GoogleTokenVerificationError,
     IdentityConflictError,
@@ -29,6 +32,9 @@ from .serializers import (
     GoogleAuthSerializer,
     MeSerializer,
     OwnerAccessSerializer,
+    OwnerMockDetailSerializer,
+    OwnerMockFiltersSerializer,
+    OwnerMockListResponseSerializer,
     OwnerOverviewSerializer,
     RefreshSessionSerializer,
     SessionSerializer,
@@ -211,6 +217,31 @@ class OwnerOverviewView(APIView):
     def get(self, request) -> Response:
         metrics = get_owner_overview_metrics()
         return Response(OwnerOverviewSerializer(instance=metrics).data)
+
+
+class OwnerMocksView(APIView):
+    throttle_classes = [ReadThrottle]
+    permission_classes = [IsActiveOwner]
+
+    @extend_schema(
+        parameters=[OwnerMockFiltersSerializer],
+        responses={200: OwnerMockListResponseSerializer},
+    )
+    def get(self, request) -> Response:
+        filters = OwnerMockFiltersSerializer(data=request.query_params)
+        filters.is_valid(raise_exception=True)
+        mocks = owner_mock_list_queryset(**filters.validated_data, now=timezone.now())
+        return Response(OwnerMockListResponseSerializer(instance={"results": mocks}).data)
+
+
+class OwnerMockDetailView(APIView):
+    throttle_classes = [ReadThrottle]
+    permission_classes = [IsActiveOwner]
+
+    @extend_schema(responses={200: OwnerMockDetailSerializer})
+    def get(self, request, mock_id) -> Response:
+        mock = get_object_or_404(owner_mock_detail_queryset(), pk=mock_id)
+        return Response(OwnerMockDetailSerializer(instance=mock).data)
 
 
 class ProfileView(APIView):

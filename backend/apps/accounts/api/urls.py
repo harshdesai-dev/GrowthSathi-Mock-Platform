@@ -6,6 +6,8 @@ from .views import (
     LogoutView,
     MeView,
     OwnerAccessView,
+    OwnerMockDetailView,
+    OwnerMocksView,
     OwnerOverviewView,
     ProfileView,
     RefreshView,
@@ -19,5 +21,7 @@ urlpatterns = [
     path("auth/me/", MeView.as_view(), name="auth-me"),
     path("owner/access/", OwnerAccessView.as_view(), name="owner-access"),
     path("owner/overview/", OwnerOverviewView.as_view(), name="owner-overview"),
+    path("owner/mocks/", OwnerMocksView.as_view(), name="owner-mocks"),
+    path("owner/mocks/<uuid:mock_id>/", OwnerMockDetailView.as_view(), name="owner-mock-detail"),
     path("profile/", ProfileView.as_view(), name="student-profile"),
 ]

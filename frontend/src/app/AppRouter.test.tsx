@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import type { AuthUser, StudentProfile } from "../api/client";
@@ -160,6 +160,10 @@ describe("Phase 1 route protection", () => {
     expect(
       screen.getByRole("navigation", { name: "Owner navigation" }),
     ).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Mocks" })[0]).toHaveAttribute(
+      "href",
+      "/owner/mocks",
+    );
     expect(screen.getByText("Total students")).toBeInTheDocument();
     expect(screen.getByText("Upcoming mocks")).toBeInTheDocument();
     expect(screen.getByText("Completed mocks")).toBeInTheDocument();
@@ -167,6 +171,47 @@ describe("Phase 1 route protection", () => {
     expect(screen.getByText("Revenue")).toBeInTheDocument();
     expect(screen.getByText("Payment failures")).toBeInTheDocument();
     expect(await screen.findByText("₹29")).toBeInTheDocument();
+  });
+
+  it("keeps owner navigation working when opening the mock list", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(Response.json({ is_owner: true }))
+        .mockResolvedValueOnce(
+          Response.json({
+            total_students: 0,
+            upcoming_mocks: 0,
+            completed_mocks: 0,
+            paid_orders: 0,
+            failed_payments: 0,
+            total_revenue_paise: 0,
+          }),
+        )
+        .mockResolvedValueOnce(Response.json({ results: [] })),
+    );
+    renderRoute(
+      "/owner",
+      authValue({
+        status: "authenticated",
+        user: ownerUser,
+        withAccess: withOwnerAccess,
+      }),
+    );
+
+    await screen.findByRole("heading", { name: "Owner overview" });
+    fireEvent.click(screen.getAllByRole("link", { name: "Mocks" })[0]!);
+
+    expect(
+      await screen.findByRole("heading", { name: "No mocks yet" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Mocks", level: 1 }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("link", { name: "Overview" })[0],
+    ).toHaveAttribute("href", "/owner");
   });
 
   it("lets a returning student bypass onboarding", () => {

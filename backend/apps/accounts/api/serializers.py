@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import StudentProfile, User
 from apps.accounts.phone import normalize_indian_mobile
+from apps.exams.models import MockTest
 
 
 class GoogleAuthSerializer(serializers.Serializer):
@@ -54,6 +55,97 @@ class OwnerOverviewSerializer(serializers.Serializer):
     paid_orders = serializers.IntegerField(min_value=0)
     failed_payments = serializers.IntegerField(min_value=0)
     total_revenue_paise = serializers.IntegerField(min_value=0)
+
+
+class OwnerMockFiltersSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=MockTest.Status.choices, required=False)
+    exam_type = serializers.CharField(required=False, allow_blank=True, max_length=40)
+    search = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        trim_whitespace=True,
+        max_length=200,
+    )
+
+
+class OwnerMockExamTypeSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    name = serializers.CharField()
+    active = serializers.BooleanField()
+
+
+class OwnerMockExamSchemeSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    version = serializers.CharField()
+    active = serializers.BooleanField()
+    total_question_count = serializers.IntegerField()
+    total_duration_minutes = serializers.IntegerField()
+    maximum_marks = serializers.IntegerField()
+
+
+class OwnerMockPhaseSerializer(serializers.Serializer):
+    order = serializers.IntegerField()
+    name = serializers.CharField()
+    start_offset_minutes = serializers.IntegerField()
+    duration_minutes = serializers.IntegerField()
+    sequence_locked = serializers.BooleanField()
+    question_count = serializers.IntegerField()
+
+
+class OwnerMockSummarySerializer(serializers.ModelSerializer):
+    exam_type = OwnerMockExamTypeSerializer(read_only=True)
+    exam_scheme = OwnerMockExamSchemeSerializer(read_only=True)
+    status_label = serializers.CharField(source="get_status_display", read_only=True)
+    question_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = MockTest
+        fields = (
+            "id",
+            "title",
+            "slug",
+            "exam_type",
+            "exam_scheme",
+            "status",
+            "status_label",
+            "starts_at",
+            "ends_at",
+            "result_release_at",
+            "price_paise",
+            "rules_verified_at",
+            "question_count",
+        )
+
+
+class OwnerMockDetailSerializer(OwnerMockSummarySerializer):
+    phases = OwnerMockPhaseSerializer(many=True, read_only=True)
+    operational_warnings = serializers.SerializerMethodField()
+
+    class Meta(OwnerMockSummarySerializer.Meta):
+        fields = OwnerMockSummarySerializer.Meta.fields + ("phases", "operational_warnings")
+
+    def get_operational_warnings(self, obj: MockTest) -> list[str]:
+        warnings = []
+        if not obj.rules_verified_at:
+            warnings.append("Official rules have not been verified for this mock.")
+        if not obj.exam_type.active:
+            warnings.append("The mock's exam type is inactive.")
+        if not obj.exam_scheme.active:
+            warnings.append("The mock's exam scheme is inactive.")
+        if obj.question_count != obj.exam_scheme.total_question_count:
+            warnings.append(
+                "The stored question count differs from the exam scheme's expected total."
+            )
+
+        actual_scheme_phase_ids = [phase.scheme_phase_id for phase in obj.phases.all()]
+        expected_scheme_phase_ids = [phase.pk for phase in obj.exam_scheme.phases.all()]
+        if actual_scheme_phase_ids != expected_scheme_phase_ids:
+            warnings.append("Generated mock phases do not match the exam scheme phases.")
+        return warnings
+
+
+class OwnerMockListResponseSerializer(serializers.Serializer):
+    results = OwnerMockSummarySerializer(many=True)
 
 
 class CsrfTokenSerializer(serializers.Serializer):

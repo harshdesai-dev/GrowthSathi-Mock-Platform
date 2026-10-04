@@ -18,6 +18,8 @@ import {
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { OnboardingPage } from "../pages/OnboardingPage";
 import { OwnerLayout } from "../owner/OwnerLayout";
+import { OwnerMockDetailPage } from "../owner/OwnerMockDetailPage";
+import { OwnerMocksPage } from "../owner/OwnerMocksPage";
 import { OwnerOverviewPage } from "../owner/OwnerOverviewPage";
 import { OwnerOnlyRoute } from "../owner/OwnerOnlyRoute";
 const ExamInstructionsPage = lazy(() =>
@@ -139,6 +141,8 @@ export function AppRoutes() {
         }
       >
         <Route index element={<OwnerOverviewPage />} />
+        <Route path="mocks" element={<OwnerMocksPage />} />
+        <Route path="mocks/:mockId" element={<OwnerMockDetailPage />} />
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

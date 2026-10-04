@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "../api/errors";
 import { useAuth } from "../auth/auth-context";
@@ -7,19 +7,17 @@ import growthSathiLogo from "../assets/brand/growthsathi-logo.webp";
 import { ownerAccessApi } from "./api";
 import "./owner.css";
 
-const navigation = [
-  "Mocks",
-  "Questions",
-  "Students",
-  "Payments",
-  "Results",
-] as const;
+const navigation = ["Questions", "Students", "Payments", "Results"] as const;
 
 function OwnerNavigation({ label = "Owner navigation" }: { label?: string }) {
   return (
     <nav aria-label={label} className="owner-navigation">
       <NavLink className="owner-navigation__link" end to="/owner">
         <span>Overview</span>
+        <span aria-hidden="true" className="owner-navigation__marker" />
+      </NavLink>
+      <NavLink className="owner-navigation__link" to="/owner/mocks">
+        <span>Mocks</span>
         <span aria-hidden="true" className="owner-navigation__marker" />
       </NavLink>
       {navigation.map((label) => (
@@ -74,6 +72,7 @@ function AccessCheckPage({
 
 export function OwnerLayout() {
   const { user, logout, withAccess } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const [access, setAccess] = useState<
     "checking" | "allowed" | "denied" | "error"
@@ -138,6 +137,9 @@ export function OwnerLayout() {
   }
 
   const ownerName = user?.full_name || user?.first_name || "Owner";
+  const sectionHeading = location.pathname.startsWith("/owner/mocks")
+    ? "Mocks"
+    : "Overview";
 
   return (
     <div className="owner-shell">
@@ -167,7 +169,7 @@ export function OwnerLayout() {
         <header className="owner-topbar">
           <div>
             <p className="eyebrow">GrowthSathi operations</p>
-            <h1>Overview</h1>
+            <h1>{sectionHeading}</h1>
           </div>
           <div className="owner-account">
             <span className="owner-account__identity">
