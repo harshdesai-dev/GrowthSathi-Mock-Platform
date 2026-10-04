@@ -6,7 +6,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Count, Prefetch
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, extend_schema_field
 from rest_framework import serializers, status
 from rest_framework.exceptions import APIException
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -38,10 +39,12 @@ class OwnerQuestionSummarySerializer(serializers.Serializer):
     question_preview = serializers.SerializerMethodField()
     has_image = serializers.SerializerMethodField()
 
-    def get_question_preview(self, obj):
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_question_preview(self, obj: Question) -> str:
         return " ".join(obj.question_text_md.split())[:240]
 
-    def get_has_image(self, obj):
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_has_image(self, obj: Question) -> bool:
         return bool(obj.question_image_url)
 
 
@@ -50,7 +53,8 @@ class OwnerQuestionOptionSerializer(serializers.Serializer):
     text = serializers.CharField(source="option_text_md")
     has_image = serializers.SerializerMethodField()
 
-    def get_has_image(self, obj):
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_has_image(self, obj: QuestionOption) -> bool:
         return bool(obj.option_image_url)
 
 
@@ -103,6 +107,10 @@ class ImportCommitSerializer(serializers.Serializer):
     token = serializers.CharField(trim_whitespace=True, max_length=3 * 1024 * 1024)
 
 
+class OwnerQuestionImportCommitResponseSerializer(serializers.Serializer):
+    imported_count = serializers.IntegerField(min_value=0)
+
+
 def _preview_payload(preview):
     rows = []
     for row in preview.rows:
@@ -147,7 +155,10 @@ class OwnerMockQuestionsView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
-    @extend_schema(responses={200: OwnerQuestionListResponseSerializer})
+    @extend_schema(
+        operation_id="owner_mock_questions_list",
+        responses={200: OwnerQuestionListResponseSerializer},
+    )
     def get(self, request, mock_id):
         mock = _get_mock(mock_id, with_count=True)
         queryset = (
@@ -202,7 +213,10 @@ class OwnerMockQuestionDetailView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
-    @extend_schema(responses={200: OwnerQuestionDetailSerializer})
+    @extend_schema(
+        operation_id="owner_mock_question_retrieve",
+        responses={200: OwnerQuestionDetailSerializer},
+    )
     def get(self, request, mock_id, question_id):
         mock = _get_mock(mock_id)
         question = get_object_or_404(
@@ -245,7 +259,9 @@ class OwnerMockQuestionImportPreviewView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
-        request=ImportUploadSerializer, responses={200: OwnerQuestionImportPreviewSerializer}
+        operation_id="owner_mock_question_import_preview",
+        request=ImportUploadSerializer,
+        responses={200: OwnerQuestionImportPreviewSerializer},
     )
     def post(self, request, mock_id):
         mock = _get_mock(mock_id)
@@ -265,7 +281,11 @@ class OwnerMockQuestionImportCommitView(APIView):
     permission_classes = [IsActiveOwner]
     parser_classes = [JSONParser]
 
-    @extend_schema(request=ImportCommitSerializer, responses={200: serializers.DictField()})
+    @extend_schema(
+        operation_id="owner_mock_question_import_commit",
+        request=ImportCommitSerializer,
+        responses={200: OwnerQuestionImportCommitResponseSerializer},
+    )
     def post(self, request, mock_id):
         mock = _get_mock(mock_id)
         if mock.status != MockTest.Status.DRAFT:
@@ -285,7 +305,10 @@ class OwnerQuestionTemplateView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
-    @extend_schema(responses={200: bytes})
+    @extend_schema(
+        operation_id="owner_question_import_template_download",
+        responses={200: bytes},
+    )
     def get(self, request, file_format):
         if file_format not in {"csv", "xlsx"}:
             from django.http import Http404

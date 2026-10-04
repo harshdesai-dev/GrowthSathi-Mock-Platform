@@ -143,6 +143,14 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Versioned API for the GrowthSathi mock-test platform.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "MockTestStatusEnum": "apps.exams.models.MockTest.Status",
+        "OrderStatusEnum": "apps.commerce.models.Order.Status",
+        "PaymentStatusEnum": "apps.commerce.models.Payment.Status",
+        "MockAccessStatusEnum": "apps.commerce.models.MockAccessGrant.Status",
+        "AttemptStatusEnum": "apps.attempts.models.Attempt.Status",
+        "ResultCalculationRunStatusEnum": "apps.results.models.ResultCalculationRun.Status",
+    },
 }
 
 LOGGING = {

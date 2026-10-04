@@ -230,6 +230,7 @@ class OwnerMocksView(APIView):
     permission_classes = [IsActiveOwner]
 
     @extend_schema(
+        operation_id="owner_mocks_list",
         parameters=[OwnerMockFiltersSerializer],
         responses={200: OwnerMockListResponseSerializer},
     )
@@ -239,7 +240,11 @@ class OwnerMocksView(APIView):
         mocks = owner_mock_list_queryset(**filters.validated_data, now=timezone.now())
         return Response(OwnerMockListResponseSerializer(instance={"results": mocks}).data)
 
-    @extend_schema(request=OwnerMockWriteSerializer, responses={201: OwnerMockDetailSerializer})
+    @extend_schema(
+        operation_id="owner_mock_create",
+        request=OwnerMockWriteSerializer,
+        responses={201: OwnerMockDetailSerializer},
+    )
     def post(self, request) -> Response:
         serializer = OwnerMockWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -269,12 +274,19 @@ class OwnerMockDetailView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
-    @extend_schema(responses={200: OwnerMockDetailSerializer})
+    @extend_schema(
+        operation_id="owner_mock_retrieve",
+        responses={200: OwnerMockDetailSerializer},
+    )
     def get(self, request, mock_id) -> Response:
         mock = get_object_or_404(owner_mock_detail_queryset(), pk=mock_id)
         return Response(OwnerMockDetailSerializer(instance=mock).data)
 
-    @extend_schema(request=OwnerMockWriteSerializer, responses={200: OwnerMockDetailSerializer})
+    @extend_schema(
+        operation_id="owner_mock_update",
+        request=OwnerMockWriteSerializer,
+        responses={200: OwnerMockDetailSerializer},
+    )
     def patch(self, request, mock_id) -> Response:
         mock = get_object_or_404(
             MockTest.objects.select_related("exam_type", "exam_scheme"), pk=mock_id

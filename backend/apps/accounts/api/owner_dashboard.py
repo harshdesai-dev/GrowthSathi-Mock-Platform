@@ -126,6 +126,7 @@ class OwnerMockTransitionView(APIView):
     permission_classes = [IsActiveOwner]
 
     @extend_schema(
+        operation_id="owner_mock_transition",
         request=OwnerLifecycleInputSerializer,
         responses={200: OwnerMockDetailSerializer},
     )
@@ -181,6 +182,199 @@ class OwnerAnswerCorrectionSerializer(serializers.Serializer):
         return value
 
 
+class OwnerResultRunSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    status = serializers.ChoiceField(choices=ResultCalculationRun.Status.choices)
+    started_at = serializers.DateTimeField()
+    completed_at = serializers.DateTimeField(allow_null=True)
+    key_verified_at = serializers.DateTimeField()
+    participant_count = serializers.IntegerField(min_value=0)
+    excluded_attempt_count = serializers.IntegerField(min_value=0)
+    notes = serializers.CharField(allow_blank=True)
+    errors = serializers.CharField(allow_blank=True)
+    published_at = serializers.DateTimeField(allow_null=True)
+
+
+class OwnerResultMockSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    title = serializers.CharField()
+    status = serializers.ChoiceField(choices=MockTest.Status.choices)
+    attempt_count = serializers.IntegerField(min_value=0)
+    result_release_at = serializers.DateTimeField()
+    calculation_state = serializers.ChoiceField(
+        choices=(
+            "NOT_STARTED",
+            "VERIFIED",
+            "CALCULATING",
+            "COMPLETE",
+            "INVALIDATED",
+            "WITHDRAWN",
+            "FAILED",
+        )
+    )
+    verification_state = serializers.ChoiceField(choices=("REQUIRED", "VERIFIED"))
+    publication_state = serializers.ChoiceField(choices=("NOT_READY", "READY", "PUBLISHED"))
+    latest_run = OwnerResultRunSerializer(allow_null=True)
+    operational_warnings = serializers.ListField(child=serializers.CharField())
+    runs = OwnerResultRunSerializer(many=True)
+
+
+class OwnerResultsResponseSerializer(serializers.Serializer):
+    results = OwnerResultMockSerializer(many=True)
+
+
+class OwnerResultSearchSerializer(serializers.Serializer):
+    search = serializers.CharField(required=False, allow_blank=True, max_length=200)
+
+
+class OwnerExcludedAttemptSerializer(serializers.Serializer):
+    attempt_id = serializers.UUIDField()
+    status = serializers.CharField()
+    reason = serializers.CharField()
+
+
+class OwnerResultReconcileResponseSerializer(serializers.Serializer):
+    participant_count = serializers.IntegerField(min_value=0)
+    excluded_attempts = OwnerExcludedAttemptSerializer(many=True)
+
+
+class OwnerAnswerCorrectionResponseSerializer(serializers.Serializer):
+    question_id = serializers.UUIDField()
+    corrected = serializers.BooleanField()
+
+
+class OwnerPaginationQuerySerializer(serializers.Serializer):
+    page = serializers.IntegerField(required=False, min_value=1)
+    page_size = serializers.IntegerField(required=False, min_value=1, max_value=100)
+
+
+class OwnerStudentQuerySerializer(OwnerPaginationQuerySerializer):
+    search = serializers.CharField(required=False, allow_blank=True, max_length=200)
+
+
+class OwnerStudentSummarySerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField(allow_blank=True)
+    email = serializers.EmailField()
+    phone = serializers.CharField(allow_blank=True)
+    class_level = serializers.CharField(allow_blank=True)
+    exam_target = serializers.CharField(allow_blank=True)
+    onboarding_completed = serializers.BooleanField()
+    joined_at = serializers.DateTimeField()
+    purchased_mocks_count = serializers.IntegerField(min_value=0)
+    attempts_count = serializers.IntegerField(min_value=0)
+
+
+class OwnerStudentOrderSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    offer = serializers.CharField()
+    amount_paise = serializers.IntegerField(min_value=0)
+    status = serializers.ChoiceField(choices=Order.Status.choices)
+    created_at = serializers.DateTimeField()
+    paid_at = serializers.DateTimeField(allow_null=True)
+
+
+class OwnerStudentAccessSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    mock_id = serializers.UUIDField()
+    mock_title = serializers.CharField()
+    status = serializers.ChoiceField(choices=MockAccessGrant.Status.choices)
+    granted_at = serializers.DateTimeField()
+    revoked_at = serializers.DateTimeField(allow_null=True)
+
+
+class OwnerStudentResultSerializer(serializers.Serializer):
+    score = serializers.FloatField()
+    rank = serializers.IntegerField(min_value=1)
+    percentile = serializers.FloatField(min_value=0, max_value=100)
+    published_at = serializers.DateTimeField()
+
+
+class OwnerStudentAttemptSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    mock_id = serializers.UUIDField()
+    mock_title = serializers.CharField()
+    status = serializers.ChoiceField(choices=Attempt.Status.choices)
+    started_at = serializers.DateTimeField()
+    submitted_at = serializers.DateTimeField(allow_null=True)
+    result = OwnerStudentResultSerializer(allow_null=True)
+
+
+class OwnerStudentDetailSerializer(OwnerStudentSummarySerializer):
+    orders = OwnerStudentOrderSerializer(many=True)
+    access = OwnerStudentAccessSerializer(many=True)
+    attempts = OwnerStudentAttemptSerializer(many=True)
+
+
+class OwnerStudentPageSerializer(serializers.Serializer):
+    count = serializers.IntegerField(min_value=0)
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = OwnerStudentSummarySerializer(many=True)
+
+
+class OwnerPaymentQuerySerializer(OwnerPaginationQuerySerializer):
+    search = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    order_status = serializers.ChoiceField(choices=Order.Status.choices, required=False)
+    payment_status = serializers.ChoiceField(choices=Payment.Status.choices, required=False)
+
+
+class OwnerOrderStudentSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField(allow_blank=True)
+    email = serializers.EmailField()
+
+
+class OwnerOrderSummarySerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    student = OwnerOrderStudentSerializer()
+    offer = serializers.CharField()
+    amount_paise = serializers.IntegerField(min_value=0)
+    currency = serializers.CharField(max_length=3)
+    order_status = serializers.ChoiceField(choices=Order.Status.choices)
+    payment_status = serializers.ChoiceField(
+        choices=Payment.Status.choices,
+        allow_null=True,
+    )
+    created_at = serializers.DateTimeField()
+    paid_at = serializers.DateTimeField(allow_null=True)
+    review_required = serializers.BooleanField()
+    review_note = serializers.CharField(allow_blank=True)
+    gateway_order_id = serializers.CharField(allow_blank=True, allow_null=True)
+
+
+class OwnerPaymentAttemptSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    gateway_payment_id = serializers.CharField()
+    amount_paise = serializers.IntegerField(min_value=0)
+    status = serializers.ChoiceField(choices=Payment.Status.choices)
+    created_at = serializers.DateTimeField()
+
+
+class OwnerPaymentAccessGrantSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    mock_id = serializers.UUIDField()
+    mock_title = serializers.CharField()
+    status = serializers.ChoiceField(choices=MockAccessGrant.Status.choices)
+    granted_at = serializers.DateTimeField()
+    revoked_at = serializers.DateTimeField(allow_null=True)
+
+
+class OwnerPaymentDetailSerializer(OwnerOrderSummarySerializer):
+    payments = OwnerPaymentAttemptSerializer(many=True)
+    access_grants = OwnerPaymentAccessGrantSerializer(many=True)
+    reconciliation_state = serializers.ChoiceField(
+        choices=("REVIEW_REQUIRED", "NO_REVIEW_REQUIRED")
+    )
+
+
+class OwnerPaymentPageSerializer(serializers.Serializer):
+    count = serializers.IntegerField(min_value=0)
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = OwnerOrderSummarySerializer(many=True)
+
+
 def _result_queryset():
     runs = ResultCalculationRun.objects.defer("paper_snapshot").order_by("-started_at", "id")
     return (
@@ -197,6 +391,11 @@ class OwnerResultsView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
+    @extend_schema(
+        operation_id="owner_results_list",
+        parameters=[OwnerResultSearchSerializer],
+        responses={200: OwnerResultsResponseSerializer},
+    )
     def get(self, request):
         mocks = _result_queryset()
         search = request.query_params.get("search", "").strip()
@@ -209,6 +408,10 @@ class OwnerMockResultsView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
+    @extend_schema(
+        operation_id="owner_mock_results_retrieve",
+        responses={200: OwnerResultMockSerializer},
+    )
     def get(self, request, mock_id):
         mock = get_object_or_404(_result_queryset(), pk=mock_id)
         return Response(_result_mock_data(mock))
@@ -218,6 +421,11 @@ class OwnerResultReconcileView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
+    @extend_schema(
+        operation_id="owner_result_attempts_reconcile",
+        request=OwnerResultConfirmationSerializer,
+        responses={200: OwnerResultReconcileResponseSerializer},
+    )
     def post(self, request, mock_id):
         serializer = OwnerResultConfirmationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -232,6 +440,11 @@ class OwnerResultVerifyView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
+    @extend_schema(
+        operation_id="owner_result_answer_key_verify",
+        request=OwnerResultNotesSerializer,
+        responses={200: OwnerResultRunSerializer},
+    )
     def post(self, request, mock_id):
         serializer = OwnerResultNotesSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -250,6 +463,11 @@ class OwnerResultCalculateView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
+    @extend_schema(
+        operation_id="owner_result_calculate",
+        request=OwnerResultConfirmationSerializer,
+        responses={200: OwnerResultRunSerializer},
+    )
     def post(self, request, mock_id, run_id):
         serializer = OwnerResultConfirmationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -265,6 +483,11 @@ class OwnerResultPublishView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
+    @extend_schema(
+        operation_id="owner_result_publish",
+        request=OwnerResultConfirmationSerializer,
+        responses={200: OwnerResultRunSerializer},
+    )
     def post(self, request, mock_id, run_id):
         serializer = OwnerResultConfirmationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -280,6 +503,11 @@ class OwnerAnswerCorrectionView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
+    @extend_schema(
+        operation_id="owner_result_answer_correct",
+        request=OwnerAnswerCorrectionSerializer,
+        responses={200: OwnerAnswerCorrectionResponseSerializer},
+    )
     def post(self, request, mock_id):
         serializer = OwnerAnswerCorrectionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -333,6 +561,11 @@ class OwnerStudentsView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
+    @extend_schema(
+        operation_id="owner_students_list",
+        parameters=[OwnerStudentQuerySerializer],
+        responses={200: OwnerStudentPageSerializer},
+    )
     def get(self, request):
         queryset = _student_queryset()
         search = request.query_params.get("search", "").strip()
@@ -353,6 +586,10 @@ class OwnerStudentDetailView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
+    @extend_schema(
+        operation_id="owner_student_retrieve",
+        responses={200: OwnerStudentDetailSerializer},
+    )
     def get(self, request, student_id):
         user = get_object_or_404(_student_queryset(), pk=student_id)
         orders = user.orders.select_related("offer").order_by("-created_at")
@@ -451,6 +688,11 @@ class OwnerPaymentsView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
+    @extend_schema(
+        operation_id="owner_payments_list",
+        parameters=[OwnerPaymentQuerySerializer],
+        responses={200: OwnerPaymentPageSerializer},
+    )
     def get(self, request):
         queryset = _payment_queryset()
         order_status = request.query_params.get("order_status", "")
@@ -476,6 +718,10 @@ class OwnerPaymentDetailView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
+    @extend_schema(
+        operation_id="owner_payment_retrieve",
+        responses={200: OwnerPaymentDetailSerializer},
+    )
     def get(self, request, order_id):
         order = get_object_or_404(_payment_queryset(), pk=order_id)
         grants = MockAccessGrant.objects.filter(source_order_item__order=order).select_related(
@@ -527,6 +773,11 @@ class OwnerPaymentReconcileView(APIView):
     throttle_classes = [ReadThrottle]
     permission_classes = [IsActiveOwner]
 
+    @extend_schema(
+        operation_id="owner_payment_reconcile",
+        request=OwnerPaymentReconcileSerializer,
+        responses={200: OwnerOrderSummarySerializer},
+    )
     def post(self, request, order_id):
         serializer = OwnerPaymentReconcileSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
