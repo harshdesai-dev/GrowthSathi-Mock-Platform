@@ -10,7 +10,11 @@ import type {
 } from "./api";
 import { OwnerMockDetailPage } from "./OwnerMockDetailPage";
 import { OwnerMockFormPage } from "./OwnerMockFormPage";
-import { isoToIstDateTimeLocal, rupeesToPaise } from "./mockForm.utils";
+import {
+  isoToIstDateTimeLocal,
+  istDateTimeLocalToIso,
+  rupeesToPaise,
+} from "./mockForm.utils";
 
 const owner: AuthUser = {
   id: "owner-id",
@@ -284,4 +288,15 @@ it("converts display times in IST and rejects invalid rupee amounts", () => {
   expect(rupeesToPaise("29.50")).toBe(2950);
   expect(rupeesToPaise("0")).toBeNull();
   expect(rupeesToPaise("29.999")).toBeNull();
+});
+
+
+it("converts IST wall-clock values to offset-aware UTC instants", () => {
+  expect(istDateTimeLocalToIso("2026-10-06T15:00")).toBe(
+    "2026-10-06T09:30:00.000Z",
+  );
+  expect(istDateTimeLocalToIso("2026-10-06T18:00:00")).toBe(
+    "2026-10-06T12:30:00.000Z",
+  );
+  expect(istDateTimeLocalToIso("invalid")).toBeNull();
 });
