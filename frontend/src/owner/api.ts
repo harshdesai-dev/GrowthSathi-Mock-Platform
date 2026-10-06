@@ -294,6 +294,41 @@ export interface OwnerMockInput {
   instructions_md: string;
 }
 
+export type OwnerOfferType = "JEE" | "CET" | "COMBO";
+
+export interface OwnerOfferMock {
+  id: string;
+  title: string;
+  slug: string;
+  status: OwnerMockStatus;
+  starts_at: string;
+  ends_at: string;
+  exam_code: string;
+}
+
+export interface OwnerOffer {
+  id: string;
+  name: string;
+  slug: string;
+  offer_type: OwnerOfferType;
+  price_paise: number;
+  active: boolean;
+  sales_start_at: string;
+  sales_end_at: string;
+  mocks: OwnerOfferMock[];
+  purchase_count: number;
+}
+
+export interface OwnerOfferInput {
+  name: string;
+  slug: string;
+  offer_type: OwnerOfferType;
+  price_paise: number;
+  sales_start_at: string;
+  sales_end_at: string;
+  mock_ids: string[];
+}
+
 export interface OwnerMockFilters {
   search: string;
   examType: string;
@@ -712,5 +747,59 @@ export function reconcileOwnerPaymentApi(
     withAccess,
     `/owner/payments/${encodeURIComponent(orderId)}/reconcile/`,
     { kind, reference, confirmed: true },
+  );
+}
+
+export function ownerOffersApi(
+  withAccess: AuthContextValue["withAccess"],
+  signal: AbortSignal,
+) {
+  return withAccess((token) =>
+    apiRequest<{ results: OwnerOffer[] }>("/owner/offers/", {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
+      signal,
+    }),
+  );
+}
+
+export function createOwnerOfferApi(
+  withAccess: AuthContextValue["withAccess"],
+  input: OwnerOfferInput,
+) {
+  return withAccess((token) =>
+    apiRequest<OwnerOffer>("/owner/offers/", {
+      method: "POST",
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+export function updateOwnerOfferApi(
+  withAccess: AuthContextValue["withAccess"],
+  offerId: string,
+  input: OwnerOfferInput,
+) {
+  return withAccess((token) =>
+    apiRequest<OwnerOffer>(`/owner/offers/${encodeURIComponent(offerId)}/`, {
+      method: "PATCH",
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+export function setOwnerOfferActiveApi(
+  withAccess: AuthContextValue["withAccess"],
+  offerId: string,
+  active: boolean,
+) {
+  return ownerMutation<OwnerOffer>(
+    withAccess,
+    `/owner/offers/${encodeURIComponent(offerId)}/activation/`,
+    { active, confirmed: true },
   );
 }

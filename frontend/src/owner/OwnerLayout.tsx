@@ -8,6 +8,7 @@ import { ownerAccessApi } from "./api";
 import "./owner.css";
 
 const navigation = [
+  { label: "Offers", to: "/owner/offers" },
   { label: "Students", to: "/owner/students" },
   { label: "Payments", to: "/owner/payments" },
   { label: "Results", to: "/owner/results" },
@@ -138,13 +139,15 @@ export function OwnerLayout() {
   const ownerName = user?.full_name || user?.first_name || "Owner";
   const sectionHeading = location.pathname.startsWith("/owner/mocks")
     ? "Mocks"
-    : location.pathname.startsWith("/owner/students")
-      ? "Students"
-      : location.pathname.startsWith("/owner/payments")
-        ? "Payments"
-        : location.pathname.startsWith("/owner/results")
-          ? "Results"
-          : "Overview";
+    : location.pathname.startsWith("/owner/offers")
+      ? "Offers"
+      : location.pathname.startsWith("/owner/students")
+        ? "Students"
+        : location.pathname.startsWith("/owner/payments")
+          ? "Payments"
+          : location.pathname.startsWith("/owner/results")
+            ? "Results"
+            : "Overview";
 
   return (
     <div className="owner-shell">

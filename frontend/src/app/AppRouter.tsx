@@ -22,6 +22,7 @@ import { OwnerMockDetailPage } from "../owner/OwnerMockDetailPage";
 import { OwnerMockFormPage } from "../owner/OwnerMockFormPage";
 import { OwnerMockQuestionsPage } from "../owner/OwnerMockQuestionsPage";
 import { OwnerMocksPage } from "../owner/OwnerMocksPage";
+import { OwnerOffersPage } from "../owner/OwnerOffersPage";
 import { OwnerOverviewPage } from "../owner/OwnerOverviewPage";
 import { OwnerOnlyRoute } from "../owner/OwnerOnlyRoute";
 import {
@@ -152,6 +153,7 @@ export function AppRoutes() {
       >
         <Route index element={<OwnerOverviewPage />} />
         <Route path="mocks" element={<OwnerMocksPage />} />
+        <Route path="offers" element={<OwnerOffersPage />} />
         <Route path="mocks/new" element={<OwnerMockFormPage />} />
         <Route path="mocks/:mockId/edit" element={<OwnerMockFormPage />} />
         <Route

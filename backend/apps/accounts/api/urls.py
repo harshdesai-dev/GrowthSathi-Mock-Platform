@@ -15,6 +15,7 @@ from .owner_dashboard import (
     OwnerStudentDetailView,
     OwnerStudentsView,
 )
+from .owner_offers import OwnerOfferActivationView, OwnerOfferDetailView, OwnerOffersView
 from .owner_operations import OwnerMockPaperValidationView, OwnerMockRulesVerificationView
 from .owner_questions import (
     OwnerMockQuestionDetailView,
@@ -46,6 +47,17 @@ urlpatterns = [
     path("owner/access/", OwnerAccessView.as_view(), name="owner-access"),
     path("owner/overview/", OwnerOverviewView.as_view(), name="owner-overview"),
     path("owner/mocks/", OwnerMocksView.as_view(), name="owner-mocks"),
+    path("owner/offers/", OwnerOffersView.as_view(), name="owner-offers"),
+    path(
+        "owner/offers/<uuid:offer_id>/",
+        OwnerOfferDetailView.as_view(),
+        name="owner-offer-detail",
+    ),
+    path(
+        "owner/offers/<uuid:offer_id>/activation/",
+        OwnerOfferActivationView.as_view(),
+        name="owner-offer-activation",
+    ),
     path("owner/mock-options/", OwnerMockOptionsView.as_view(), name="owner-mock-options"),
     path("owner/mocks/<uuid:mock_id>/", OwnerMockDetailView.as_view(), name="owner-mock-detail"),
     path(
