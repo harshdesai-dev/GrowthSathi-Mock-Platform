@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_field
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -42,6 +42,7 @@ class OwnerOfferSerializer(serializers.ModelSerializer):
             "purchase_count",
         )
 
+    @extend_schema_field(OwnerOfferMockSerializer(many=True))
     def get_mocks(self, obj):
         mocks = [item.mock_test for item in obj.items.all()]
         return OwnerOfferMockSerializer(mocks, many=True).data
