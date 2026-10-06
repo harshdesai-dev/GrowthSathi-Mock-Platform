@@ -294,7 +294,6 @@ export interface OwnerMockInput {
   instructions_md: string;
 }
 
-
 export type OwnerOfferType = "JEE" | "CET" | "COMBO";
 
 export interface OwnerOfferMock {
@@ -750,7 +749,6 @@ export function reconcileOwnerPaymentApi(
     { kind, reference, confirmed: true },
   );
 }
-
 
 export function ownerOffersApi(
   withAccess: AuthContextValue["withAccess"],

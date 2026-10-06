@@ -142,12 +142,12 @@ export function OwnerLayout() {
     : location.pathname.startsWith("/owner/offers")
       ? "Offers"
       : location.pathname.startsWith("/owner/students")
-      ? "Students"
-      : location.pathname.startsWith("/owner/payments")
-        ? "Payments"
-        : location.pathname.startsWith("/owner/results")
-          ? "Results"
-          : "Overview";
+        ? "Students"
+        : location.pathname.startsWith("/owner/payments")
+          ? "Payments"
+          : location.pathname.startsWith("/owner/results")
+            ? "Results"
+            : "Overview";
 
   return (
     <div className="owner-shell">

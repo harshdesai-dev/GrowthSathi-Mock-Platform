@@ -106,8 +106,10 @@ export function OwnerOffersPage() {
     () =>
       mocks.filter((mock) => {
         if (!saleableStatuses.has(mock.status)) return false;
-        if (form.offer_type === "JEE") return mock.exam_type.code === "JEE_MAIN";
-        if (form.offer_type === "CET") return mock.exam_type.code === "MHT_CET_PCM";
+        if (form.offer_type === "JEE")
+          return mock.exam_type.code === "JEE_MAIN";
+        if (form.offer_type === "CET")
+          return mock.exam_type.code === "MHT_CET_PCM";
         return ["JEE_MAIN", "MHT_CET_PCM"].includes(mock.exam_type.code);
       }),
     [mocks, form.offer_type],
@@ -152,7 +154,9 @@ export function OwnerOffersPage() {
           .filter(Boolean),
       );
       if (!codes.has("JEE_MAIN") || !codes.has("MHT_CET_PCM")) {
-        setMessage("A combo must include one JEE Main mock and one MHT-CET PCM mock.");
+        setMessage(
+          "A combo must include one JEE Main mock and one MHT-CET PCM mock.",
+        );
         return;
       }
     }
@@ -209,7 +213,10 @@ export function OwnerOffersPage() {
   }
   if (state === "error") {
     return (
-      <section className="owner-mocks-state owner-mocks-state--error" role="alert">
+      <section
+        className="owner-mocks-state owner-mocks-state--error"
+        role="alert"
+      >
         <h2>Offers unavailable</h2>
         <p>Wake the backend if needed, then try again.</p>
         <button
@@ -233,9 +240,16 @@ export function OwnerOffersPage() {
         </div>
       </header>
 
-      {message && <p className="owner-offer-message" role="status">{message}</p>}
+      {message && (
+        <p className="owner-offer-message" role="status">
+          {message}
+        </p>
+      )}
 
-      <form className="owner-operation-panel owner-offer-form" onSubmit={submit}>
+      <form
+        className="owner-operation-panel owner-offer-form"
+        onSubmit={submit}
+      >
         <div className="owner-operation-panel__heading">
           <h3>{editing ? "Edit inactive offer" : "Create offer"}</h3>
           {editing && (
@@ -273,7 +287,9 @@ export function OwnerOffersPage() {
             value={form.offer_type}
           >
             {Object.entries(offerLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
+              <option key={value} value={value}>
+                {label}
+              </option>
             ))}
           </select>
         </label>
@@ -307,10 +323,14 @@ export function OwnerOffersPage() {
 
         <fieldset className="owner-offer-mocks">
           <legend>
-            Included mock{expectedMockCount > 1 ? "s" : ""} · choose {expectedMockCount}
+            Included mock{expectedMockCount > 1 ? "s" : ""} · choose{" "}
+            {expectedMockCount}
           </legend>
           {!selectableMocks.length ? (
-            <p>No registration-open, scheduled or live mocks match this offer type.</p>
+            <p>
+              No registration-open, scheduled or live mocks match this offer
+              type.
+            </p>
           ) : (
             selectableMocks.map((mock) => {
               const checked = form.mock_ids.includes(mock.id);
@@ -318,7 +338,9 @@ export function OwnerOffersPage() {
                 <label key={mock.id}>
                   <input
                     checked={checked}
-                    disabled={!checked && form.mock_ids.length >= expectedMockCount}
+                    disabled={
+                      !checked && form.mock_ids.length >= expectedMockCount
+                    }
                     onChange={() =>
                       setValue(
                         "mock_ids",
@@ -331,7 +353,9 @@ export function OwnerOffersPage() {
                   />
                   <span>
                     <strong>{mock.title}</strong>
-                    <small>{mock.exam_type.name} · {mock.status.replaceAll("_", " ")}</small>
+                    <small>
+                      {mock.exam_type.name} · {mock.status.replaceAll("_", " ")}
+                    </small>
                   </span>
                 </label>
               );
@@ -345,58 +369,76 @@ export function OwnerOffersPage() {
       </form>
 
       <section className="owner-data-list" aria-label="Existing offers">
-        {offers.length ? offers.map((offer) => (
-          <article className="owner-data-card" key={offer.id}>
-            <div className="owner-operation-panel__heading">
-              <div>
-                <p className="eyebrow">{offerLabels[offer.offer_type]}</p>
-                <h3>{offer.name}</h3>
+        {offers.length ? (
+          offers.map((offer) => (
+            <article className="owner-data-card" key={offer.id}>
+              <div className="owner-operation-panel__heading">
+                <div>
+                  <p className="eyebrow">{offerLabels[offer.offer_type]}</p>
+                  <h3>{offer.name}</h3>
+                </div>
+                <span
+                  className={
+                    offer.active
+                      ? "owner-rules-badge owner-rules-badge--verified"
+                      : "owner-rules-badge"
+                  }
+                >
+                  {offer.active ? "Active" : "Inactive"}
+                </span>
               </div>
-              <span className={offer.active ? "owner-rules-badge owner-rules-badge--verified" : "owner-rules-badge"}>
-                {offer.active ? "Active" : "Inactive"}
-              </span>
-            </div>
-            <dl>
-              <div><dt>Price</dt><dd>{price(offer.price_paise)}</dd></div>
-              <div><dt>Purchases</dt><dd>{offer.purchase_count}</dd></div>
-              <div>
-                <dt>Mocks</dt>
-                <dd>{offer.mocks.map((mock) => mock.title).join(" + ")}</dd>
+              <dl>
+                <div>
+                  <dt>Price</dt>
+                  <dd>{price(offer.price_paise)}</dd>
+                </div>
+                <div>
+                  <dt>Purchases</dt>
+                  <dd>{offer.purchase_count}</dd>
+                </div>
+                <div>
+                  <dt>Mocks</dt>
+                  <dd>{offer.mocks.map((mock) => mock.title).join(" + ")}</dd>
+                </div>
+                <div>
+                  <dt>Sales window</dt>
+                  <dd>
+                    {new Date(offer.sales_start_at).toLocaleString("en-IN", {
+                      timeZone: "Asia/Kolkata",
+                    })}
+                    {" → "}
+                    {new Date(offer.sales_end_at).toLocaleString("en-IN", {
+                      timeZone: "Asia/Kolkata",
+                    })}
+                  </dd>
+                </div>
+              </dl>
+              <div className="owner-offer-actions">
+                <button
+                  className={offer.active ? "danger-button" : "primary-button"}
+                  disabled={busy}
+                  onClick={() => void toggle(offer)}
+                  type="button"
+                >
+                  {offer.active ? "Deactivate" : "Activate"}
+                </button>
+                <button
+                  className="secondary-button"
+                  disabled={busy || offer.active}
+                  onClick={() => {
+                    setEditing(offer);
+                    setForm(formFromOffer(offer));
+                    setMessage("");
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  type="button"
+                >
+                  Edit
+                </button>
               </div>
-              <div>
-                <dt>Sales window</dt>
-                <dd>
-                  {new Date(offer.sales_start_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
-                  {" → "}
-                  {new Date(offer.sales_end_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
-                </dd>
-              </div>
-            </dl>
-            <div className="owner-offer-actions">
-              <button
-                className={offer.active ? "danger-button" : "primary-button"}
-                disabled={busy}
-                onClick={() => void toggle(offer)}
-                type="button"
-              >
-                {offer.active ? "Deactivate" : "Activate"}
-              </button>
-              <button
-                className="secondary-button"
-                disabled={busy || offer.active}
-                onClick={() => {
-                  setEditing(offer);
-                  setForm(formFromOffer(offer));
-                  setMessage("");
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-                type="button"
-              >
-                Edit
-              </button>
-            </div>
-          </article>
-        )) : (
+            </article>
+          ))
+        ) : (
           <div className="owner-mocks-state">
             <h3>No offers yet</h3>
             <p>Create the first offer above.</p>
