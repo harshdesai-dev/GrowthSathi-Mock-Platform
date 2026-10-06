@@ -168,7 +168,7 @@ class OwnerOfferDetailView(APIView):
 
     @extend_schema(responses={200: OwnerOfferSerializer})
     def get(self, request, offer_id):
-        return Response(OwnerOfferSerializer(get_object_or_404(_offer_queryset(), pk=offer_id)).data)
+        offer = get_object_or_404(_offer_queryset(), pk=offer_id)\n        return Response(OwnerOfferSerializer(offer).data)
 
     @extend_schema(request=OwnerOfferWriteSerializer, responses={200: OwnerOfferSerializer})
     def patch(self, request, offer_id):
