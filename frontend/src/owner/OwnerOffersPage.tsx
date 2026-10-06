@@ -14,7 +14,7 @@ import {
   type OwnerOfferInput,
   type OwnerOfferType,
 } from "./api";
-import { isoToIstDateTimeLocal, rupeesToPaise } from "./mockForm.utils";
+import { isoToIstDateTimeLocal, istDateTimeLocalToIso, rupeesToPaise } from "./mockForm.utils";
 
 const offerLabels: Record<OwnerOfferType, string> = {
   JEE: "JEE Main",
@@ -160,13 +160,20 @@ export function OwnerOffersPage() {
       }
     }
 
+    const salesStart = istDateTimeLocalToIso(form.sales_start_at);
+    const salesEnd = istDateTimeLocalToIso(form.sales_end_at);
+    if (!salesStart || !salesEnd) {
+      setMessage("Enter valid sales start and end times in IST.");
+      return;
+    }
+
     const input: OwnerOfferInput = {
       name: form.name.trim(),
       slug: form.slug.trim(),
       offer_type: form.offer_type,
       price_paise: paise,
-      sales_start_at: form.sales_start_at,
-      sales_end_at: form.sales_end_at,
+      sales_start_at: salesStart,
+      sales_end_at: salesEnd,
       mock_ids: form.mock_ids,
     };
 
