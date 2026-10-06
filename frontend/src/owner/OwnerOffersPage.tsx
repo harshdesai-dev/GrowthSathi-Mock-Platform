@@ -84,7 +84,6 @@ export function OwnerOffersPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    setState("loading");
     void Promise.all([
       ownerOffersApi(withAccess, controller.signal),
       ownerMocksApi(
@@ -221,7 +220,10 @@ export function OwnerOffersPage() {
         <p>Wake the backend if needed, then try again.</p>
         <button
           className="primary-button"
-          onClick={() => setRefreshKey((value) => value + 1)}
+          onClick={() => {
+            setState("loading");
+            setRefreshKey((value) => value + 1);
+          }}
           type="button"
         >
           Try again
