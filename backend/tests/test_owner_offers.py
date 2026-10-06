@@ -93,6 +93,7 @@ def create_saleable_mock():
             question_number=1,
             question_type=QuestionType.MCQ_SINGLE,
             question_text_md="2 + 2 equals?",
+            explanation_md="Two plus two equals four.",
             positive_marks=Decimal("4"),
             negative_marks=Decimal("1"),
         )
