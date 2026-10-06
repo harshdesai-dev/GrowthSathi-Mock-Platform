@@ -14,7 +14,11 @@ import {
   type OwnerOfferInput,
   type OwnerOfferType,
 } from "./api";
-import { isoToIstDateTimeLocal, istDateTimeLocalToIso, rupeesToPaise } from "./mockForm.utils";
+import {
+  isoToIstDateTimeLocal,
+  istDateTimeLocalToIso,
+  rupeesToPaise,
+} from "./mockForm.utils";
 
 const offerLabels: Record<OwnerOfferType, string> = {
   JEE: "JEE Main",
