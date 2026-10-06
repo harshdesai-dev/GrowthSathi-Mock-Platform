@@ -24,3 +24,13 @@ export function rupeesToPaise(value: string): number | null {
   if (paise < 1n || paise > 2_147_483_647n) return null;
   return Number(paise);
 }
+
+/** Convert a wall-clock IST input to an offset-aware instant for the UTC API. */
+export function istDateTimeLocalToIso(value: string): string | null {
+  const full = value.length === 16 ? `${value}:00` : value;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(full)) {
+    return null;
+  }
+  const instant = new Date(`${full}+05:30`);
+  return Number.isNaN(instant.getTime()) ? null : instant.toISOString();
+}
