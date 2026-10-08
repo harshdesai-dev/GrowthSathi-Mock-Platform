@@ -178,8 +178,6 @@ it("shows get access when a future offer is actually purchasable", async () => {
     },
     upcoming_mocks: [],
   });
-  expect(await screen.findByRole("link", { name: "Get access" })).toHaveAttribute(
-    "href",
-    "/mocks",
-  );
+  const getAccessLink = await screen.findByRole("link", { name: "Get access" });
+  expect(getAccessLink).toHaveAttribute("href", "/mocks");
 });
