@@ -162,7 +162,8 @@ it("shows registration opens soon for an inactive offer without a checkout link"
     upcoming_mocks: [],
   });
   expect(await screen.findByText("Registration opens soon")).toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: "Get access" })).not.toBeInTheDocument();
+  const getAccessLink = screen.queryByRole("link", { name: "Get access" });
+  expect(getAccessLink).not.toBeInTheDocument();
 });
 
 it("shows get access when a future offer is actually purchasable", async () => {
