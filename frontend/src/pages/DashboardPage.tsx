@@ -77,10 +77,14 @@ function DashboardAction({ mock }: { mock: DashboardMock }) {
       </Link>
     );
   if (mock.access_state !== "PURCHASED")
-    return (
+    return mock.registration_available ? (
       <Link className="secondary-button" to="/mocks">
         Get access
       </Link>
+    ) : (
+      <span className="secondary-button" aria-disabled="true">
+        Registration opens soon
+      </span>
     );
   if (mock.can_start)
     return (
@@ -159,7 +163,7 @@ function DashboardContent({
   name: string;
 }) {
   const result = data.latest_result;
-  const otherMocks = data.upcoming_mocks.slice(1);
+  const otherMocks = data.upcoming_mocks.filter((mock) => mock.id !== data.next_mock?.id);
   return (
     <>
       <header className="dashboard-heading">
