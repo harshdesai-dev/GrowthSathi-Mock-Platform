@@ -2,6 +2,8 @@
 
 from datetime import timedelta
 
+from django.core.exceptions import ValidationError as DjangoValidationError
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from django.urls import path
@@ -14,7 +16,8 @@ from rest_framework.response import Response
 from apps.attempts.api import ExamView
 from apps.attempts.models import Attempt
 from apps.attempts.services import exam_info, has_access
-from apps.commerce.services import PUBLIC_STATUSES
+from apps.commerce.models import MockOffer
+from apps.commerce.services import SALEABLE_STATUSES, validate_saleability
 from apps.exams.models import MockTest
 
 from .models import Result, ResultCalculationRun
@@ -150,6 +153,7 @@ class DashboardMockSerializer(serializers.Serializer):
         ]
     )
     can_start = serializers.BooleanField()
+    registration_available = serializers.BooleanField()
     attempt_id = serializers.UUIDField(allow_null=True)
     attempt_status = serializers.CharField(allow_null=True)
 
@@ -187,7 +191,38 @@ def dashboard_lifecycle(mock, info, now):
     return "UPCOMING"
 
 
-def dashboard_mock(mock, student, now):
+def _is_internal_mock(mock):
+    """Legacy rehearsals have no explicit private flag; never promote them to the student dashboard."""
+    slug = mock.slug.casefold()
+    return (
+        "rehearsal" in slug
+        or "rehearsal" in mock.title.casefold()
+        or any(marker in slug for marker in ("internal-", "sandbox-", "test-only"))
+    )
+
+
+def _purchasable_mock_ids(now):
+    """Use the same offer validation as checkout; inactive/expired offers grant no CTA."""
+    ids = set()
+    offers = (
+        MockOffer.objects.filter(
+            active=True,
+            sales_start_at__lte=now,
+            sales_end_at__gt=now,
+        )
+        .prefetch_related("items__mock_test__exam_type", "items__mock_test__exam_scheme")
+    )
+    for offer in offers:
+        offer_mocks = [item.mock_test for item in offer.items.all()]
+        try:
+            validate_saleability(offer, mocks=offer_mocks)
+        except DjangoValidationError:
+            continue
+        ids.update(mock.pk for mock in offer_mocks)
+    return ids
+
+
+def dashboard_mock(mock, student, now, *, registration_available=False):
     """Read access/start state from the established attempt and commerce services."""
     allowed = mock.status != "CANCELLED" and has_access(student.pk, mock.pk)
     info = exam_info(student, mock.pk) if allowed else None
@@ -204,6 +239,7 @@ def dashboard_mock(mock, student, now):
         else "NOT_PURCHASED",
         "lifecycle_state": dashboard_lifecycle(mock, info, now),
         "can_start": info["can_start"] if info else False,
+        "registration_available": registration_available,
         "attempt_id": info["attempt_id"] if info else None,
         "attempt_status": info["attempt_status"] if info else None,
     }
@@ -215,12 +251,24 @@ class Dashboard(ExamView):
     @extend_schema(responses=DashboardSerializer)
     def get(self, request):
         now = timezone.now()
-        mocks = list(
-            MockTest.objects.filter(status__in=PUBLIC_STATUSES - {"RESULTS_PUBLISHED"})
-            .select_related("exam_type")
-            .order_by("starts_at", "pk")
-        )
-        upcoming = [dashboard_mock(mock, request.user, now) for mock in mocks]
+        mocks = [
+            mock
+            for mock in MockTest.objects.filter(
+                status__in=SALEABLE_STATUSES,
+                ends_at__gt=now,
+            ).select_related("exam_type").order_by("starts_at", "pk")
+            if not _is_internal_mock(mock)
+        ]
+        purchasable_ids = _purchasable_mock_ids(now)
+        upcoming = [
+            dashboard_mock(
+                mock,
+                request.user,
+                now,
+                registration_available=mock.pk in purchasable_ids,
+            )
+            for mock in mocks
+        ]
         results = list(
             published_results()
             .filter(attempt__student=request.user)
