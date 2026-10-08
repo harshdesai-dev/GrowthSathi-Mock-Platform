@@ -203,14 +203,11 @@ def _is_internal_mock(mock):
 def _purchasable_mock_ids(now):
     """Use the same offer validation as checkout; inactive/expired offers grant no CTA."""
     ids = set()
-    offers = (
-        MockOffer.objects.filter(
-            active=True,
-            sales_start_at__lte=now,
-            sales_end_at__gt=now,
-        )
-        .prefetch_related("items__mock_test__exam_type", "items__mock_test__exam_scheme")
-    )
+    offers = MockOffer.objects.filter(
+        active=True,
+        sales_start_at__lte=now,
+        sales_end_at__gt=now,
+    ).prefetch_related("items__mock_test__exam_type", "items__mock_test__exam_scheme")
     for offer in offers:
         offer_mocks = [item.mock_test for item in offer.items.all()]
         try:
@@ -255,7 +252,9 @@ class Dashboard(ExamView):
             for mock in MockTest.objects.filter(
                 status__in=SALEABLE_STATUSES,
                 ends_at__gt=now,
-            ).select_related("exam_type").order_by("starts_at", "pk")
+            )
+            .select_related("exam_type")
+            .order_by("starts_at", "pk")
             if not _is_internal_mock(mock)
         ]
         purchasable_ids = _purchasable_mock_ids(now)
