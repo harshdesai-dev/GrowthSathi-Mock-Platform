@@ -643,6 +643,7 @@ def test_dashboard_lifecycle_uses_server_schedule_and_attempt_state(
     info = {"attempt_status": attempt_status} if attempt_status else None
     assert dashboard_lifecycle(mock, info, now) == expected
 
+
 def test_internal_rehearsals_are_excluded_by_legacy_identifier():
     rehearsal = SimpleNamespace(slug="multi-student-quick-rehearsal-jee", title="JEE Rehearsal")
     public = SimpleNamespace(slug="jee-main-mock-1-18-oct-2026", title="JEE Main Mock #1")
