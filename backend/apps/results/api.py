@@ -191,7 +191,7 @@ def dashboard_lifecycle(mock, info, now):
 
 
 def _is_internal_mock(mock):
-    """Legacy rehearsals have no explicit private flag; never promote them to the student dashboard."""
+    """Hide legacy rehearsal mocks until a dedicated visibility flag exists."""
     slug = mock.slug.casefold()
     return (
         "rehearsal" in slug
