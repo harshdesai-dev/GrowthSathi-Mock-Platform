@@ -17,7 +17,7 @@ from apps.accounts.models import User
 from apps.attempts.models import Attempt, StudentResponse
 from apps.exams.models import ExamScheme, MockTest
 from apps.exams.services import correct_answer_key
-from apps.results.api import dashboard_lifecycle
+from apps.results.api import _is_internal_mock, dashboard_lifecycle, dashboard_mock
 from apps.results.models import Result, ResultCalculationEntry, ResultCalculationRun
 from apps.results.scoring import participant_reason, rank_scores, score_attempt, score_question
 from apps.results.services import (
@@ -575,9 +575,9 @@ def test_dashboard_is_authenticated_private_and_only_exposes_published_results(b
     before = client(students[0]).get("/api/v1/dashboard/")
     assert before.status_code == 200
     assert before.data["latest_result"] is None
-    assert before.data["upcoming_mocks"][0]["lifecycle_state"] == "RESULT_PENDING"
-    assert all("email" not in str(item) for item in before.data["upcoming_mocks"])
-    assert set(before.data["upcoming_mocks"][0]) == {
+    assert before.data["upcoming_mocks"] == []
+    assert before.data["next_mock"] is None
+    assert set(dashboard_mock(mock, students[0], timezone.now())) == {
         "id",
         "title",
         "exam",
@@ -586,6 +586,7 @@ def test_dashboard_is_authenticated_private_and_only_exposes_published_results(b
         "access_state",
         "lifecycle_state",
         "can_start",
+        "registration_available",
         "attempt_id",
         "attempt_status",
     }
@@ -594,9 +595,8 @@ def test_dashboard_is_authenticated_private_and_only_exposes_published_results(b
         email="dashboard-stranger@test.invalid", google_sub="dashboard-stranger"
     )
     stranger_data = client(stranger).get("/api/v1/dashboard/").data
-    assert stranger_data["upcoming_mocks"][0]["access_state"] == "NOT_PURCHASED"
-    assert stranger_data["upcoming_mocks"][0]["can_start"] is False
-    assert stranger_data["upcoming_mocks"][0]["attempt_id"] is None
+    assert stranger_data["upcoming_mocks"] == []
+    assert stranger_data["next_mock"] is None
 
     run = calculated(mock, owner)
     publish_results(run.pk, actor=owner)
@@ -642,3 +642,9 @@ def test_dashboard_lifecycle_uses_server_schedule_and_attempt_state(
     )
     info = {"attempt_status": attempt_status} if attempt_status else None
     assert dashboard_lifecycle(mock, info, now) == expected
+
+def test_internal_rehearsals_are_excluded_by_legacy_identifier():
+    rehearsal = SimpleNamespace(slug="multi-student-quick-rehearsal-jee", title="JEE Rehearsal")
+    public = SimpleNamespace(slug="jee-main-mock-1-18-oct-2026", title="JEE Main Mock #1")
+    assert _is_internal_mock(rehearsal)
+    assert not _is_internal_mock(public)
