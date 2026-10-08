@@ -163,7 +163,9 @@ function DashboardContent({
   name: string;
 }) {
   const result = data.latest_result;
-  const otherMocks = data.upcoming_mocks.filter((mock) => mock.id !== data.next_mock?.id);
+  const otherMocks = data.upcoming_mocks.filter(
+    (mock) => mock.id !== data.next_mock?.id,
+  );
   return (
     <>
       <header className="dashboard-heading">
