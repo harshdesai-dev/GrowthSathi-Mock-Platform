@@ -25,7 +25,6 @@ export function rupeesToPaise(value: string): number | null {
   return Number(paise);
 }
 
-
 /** Convert a wall-clock IST input to an offset-aware instant for the UTC API. */
 export function istDateTimeLocalToIso(value: string): string | null {
   const full = value.length === 16 ? `${value}:00` : value;

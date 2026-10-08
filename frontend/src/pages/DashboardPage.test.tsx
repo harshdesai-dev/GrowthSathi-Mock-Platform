@@ -14,6 +14,7 @@ const mock = {
   access_state: "PURCHASED" as const,
   lifecycle_state: "STARTING_SOON" as const,
   can_start: true,
+  registration_available: false,
   attempt_id: null,
   attempt_status: null,
 };
@@ -90,6 +91,7 @@ it("renders unpurchased, in-progress and result-pending states without enabling 
       {
         ...mock,
         access_state: "NOT_PURCHASED",
+        registration_available: true,
         can_start: false,
         lifecycle_state: "UPCOMING",
       },
@@ -113,6 +115,7 @@ it("renders unpurchased, in-progress and result-pending states without enabling 
     next_mock: {
       ...mock,
       access_state: "NOT_PURCHASED",
+      registration_available: true,
       can_start: false,
       lifecycle_state: "UPCOMING",
     },
@@ -144,4 +147,39 @@ it("renders clean empty and generic error states", async () => {
     await screen.findByText(/No upcoming mocks right now/),
   ).toBeInTheDocument();
   expect(screen.getByText("No published results yet.")).toBeInTheDocument();
+});
+
+it("shows registration opens soon for an inactive offer without a checkout link", async () => {
+  renderDashboard({
+    ...data,
+    next_mock: {
+      ...mock,
+      access_state: "NOT_PURCHASED",
+      can_start: false,
+      lifecycle_state: "UPCOMING",
+      registration_available: false,
+    },
+    upcoming_mocks: [],
+  });
+  expect(
+    await screen.findByText("Registration opens soon"),
+  ).toBeInTheDocument();
+  const getAccessLink = screen.queryByRole("link", { name: "Get access" });
+  expect(getAccessLink).not.toBeInTheDocument();
+});
+
+it("shows get access when a future offer is actually purchasable", async () => {
+  renderDashboard({
+    ...data,
+    next_mock: {
+      ...mock,
+      access_state: "NOT_PURCHASED",
+      can_start: false,
+      lifecycle_state: "UPCOMING",
+      registration_available: true,
+    },
+    upcoming_mocks: [],
+  });
+  const getAccessLink = await screen.findByRole("link", { name: "Get access" });
+  expect(getAccessLink).toHaveAttribute("href", "/mocks");
 });

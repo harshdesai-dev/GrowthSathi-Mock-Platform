@@ -290,7 +290,6 @@ it("converts display times in IST and rejects invalid rupee amounts", () => {
   expect(rupeesToPaise("29.999")).toBeNull();
 });
 
-
 it("converts IST wall-clock values to offset-aware UTC instants", () => {
   expect(istDateTimeLocalToIso("2026-10-06T15:00")).toBe(
     "2026-10-06T09:30:00.000Z",
