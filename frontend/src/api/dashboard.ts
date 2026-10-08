@@ -22,6 +22,7 @@ export interface DashboardMock {
   access_state: DashboardAccessState;
   lifecycle_state: DashboardLifecycleState;
   can_start: boolean;
+  registration_available: boolean;
   attempt_id: string | null;
   attempt_status:
     "IN_PROGRESS" | "SUBMITTED" | "AUTO_SUBMITTED" | "INVALID" | null;
